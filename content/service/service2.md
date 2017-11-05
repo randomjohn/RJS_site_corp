@@ -1,6 +1,6 @@
 +++
 title = "Predictive modeling"
-date: '2017-11-04'
+date = '2017-11-04'
 +++
 
 Inform future decisions using your data.

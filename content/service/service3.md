@@ -1,6 +1,6 @@
 +++
 title = "Reproducible workflows"
-date: '2017-11-04'
+date = '2017-11-04'
 +++
 
 Reproduce and improve your analyses.

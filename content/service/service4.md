@@ -1,5 +1,6 @@
 +++
 title = "Effective communication"
+date = "November 5, 2017"
 +++
 
 Help others understand your decisions.

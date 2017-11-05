@@ -1,5 +1,6 @@
 +++
 title = "Reproducible workflows"
+date = "November 5, 2017"
 +++
 
 Reproduce and improve your analyses.

@@ -1,5 +1,6 @@
 +++
 title = "Exploratory data analysis"
+date = "November 5, 2017"
 +++
 
 Quickly learn from your data.

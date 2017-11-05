@@ -1,5 +1,6 @@
 +++
 title = "Predictive modeling"
+date = "November 5, 2017"
 +++
 
 Inform future decisions using your data.

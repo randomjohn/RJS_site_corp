@@ -7,8 +7,7 @@ Help others understand your decisions.
 
 <!--more-->
 
-![Blackboard][blackboard]
+![](images/blackboard.jpg){ width=50% }
 
 When you have made your predictions and your decisions, chances are you have to justify your decisions to other stakeholders. Any good analytics workflow will account for the need to effectively communicate results either as a report or a presentation. Modern tools will even adjust reports and presentations as new data comes in.
 
-[blackboard]: (images/blackboard.jpg) "Blackboard" { width=50% }

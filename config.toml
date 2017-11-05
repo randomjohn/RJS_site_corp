@@ -1,4 +1,4 @@
-baseurl = "http://www.rjsdatascience.com"
+baseurl = "http://www.rjsdatascience.com/"
 languageCode = "en-us"
 title = "RJS Data Science"
 theme = "hugo-initio"

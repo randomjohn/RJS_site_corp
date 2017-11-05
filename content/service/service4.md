@@ -1,6 +1,6 @@
 +++
 title = "Effective communication"
-date = "November 5, 2017"
+date: '2017-11-04'
 +++
 
 Help others understand your decisions.

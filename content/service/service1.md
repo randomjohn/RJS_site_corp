@@ -1,6 +1,6 @@
 +++
 title = "Exploratory data analysis"
-date = "November 5, 2017"
+date: '2017-11-04'
 +++
 
 Quickly learn from your data.

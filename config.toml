@@ -1,0 +1,102 @@
+baseurl = "http://www.rjsdatascience.com"
+languageCode = "en-us"
+title = "RJS Data Science"
+theme = "hugo-initio"
+publishDir = "public"
+ignoreFiles = ["\\.Rmd$", "_files$", "_cache$"]
+copyright = "(c) RJS Data Science LLC"
+
+[params]
+    name = "RJS Data Science LLC"
+    description = "Professional statistician and data science consultant with 15+ years experience"
+    subheader = "You spend a lot of time and money collecting data. How do you use it to make decisions?"
+    email = "john@rjsdatascience.com"
+    phone = "(919)368-4255"
+    # address = "315 Majesty Ct., Greenville, SC  29615"
+    address = ""
+    year = 2017
+    background = ""
+    favicon = "images/gt_favicon.png"
+    DateForm = "January 2, 2006"
+
+    showSubheader = true
+    showServices = true
+    showRecentWorks = false
+    showDownload = false
+    showClients = false
+
+[[menu.main]]
+    name = "home"
+    url = "/"
+    weight = 1
+[[menu.main]]
+    name = "blog"
+    url = "/post/"
+    weight = 5
+
+[params.disqus]
+    site = "randomjohn"
+
+[params.sharethis]
+    property = "123456789012345678901234"
+    custom = false
+
+[params.google.analytics]
+    trackerID = "88844885"
+
+[[params.social]]
+	title = "facebook"
+	url = "https://www.facebook.com/johndjohnson"
+    icon = "fa-facebook-square"
+    footer = true
+    sharethis = true
+    network = "facebook"
+[[params.social]]
+	title = "twitter"
+	url = "https://twitter.com/rjsdatascience"
+    icon = "fa-twitter-square"
+    footer = true
+    sharethis = true
+    network = "twitter"
+[[params.social]]
+	title = "instagram"
+	url = "https://www.instagram.com/nickname"
+    icon = "fa-instagram"
+    footer = false
+    sharethis = false
+    network = ""
+[[params.social]]
+	title = "google+"
+	url = "https://plus.google.com/+nickname"
+    icon = "fa-google-plus-square"
+    footer = false
+    sharethis = false
+    network = "googleplus"
+[[params.social]]
+	title = "linkedin"
+	url = "https://www.linkedin.com/in/johndjohnson"
+    icon = "fa-linkedin-square"
+    footer = false
+    sharethis = true
+    network = "linkedin"
+[[params.social]]
+	title = "tumblr"
+	url = "https://nickname.tumblr.com"
+    icon = "fa-tumblr-square"
+    footer = false
+    sharethis = false
+    network = "tumblr"
+[[params.social]]
+	title = "github"
+	url = "https://github.com/randomjohn"
+    icon = "fa-github"
+    footer = true
+    sharethis = false
+    network = ""
+[[params.social]]
+	title = "email"
+	url = "mailto:john@rjsdatascience.com"
+    icon = "fa-envelope"
+    footer = true
+    sharethis = true
+    network = "email"

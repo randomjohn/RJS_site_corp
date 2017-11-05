@@ -1,11 +1,19 @@
 ---
-title: "Flights from GSP"
-author: "John"
-date: '2017-09-24'
-categories: ["Greenville"]
-tags: ["flights"]
-draft: false
+title: Flights from GSP
+author: John
+date: '2017-11-04'
+categories:
+  - Greenville
+tags:
+  - flights
+draft: no
 ---
+
+```{r setup}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+library(tidyverse)
+library(lubridate)
+```
 
 # Introduction
 
@@ -13,4 +21,103 @@ Holiday season is upon us, and many of us fly to see family. Taking flights is a
 
 Flight analysis is everywhere these days because the increase of the power of computer enables us to analyze a large number of data points, and there are a large number of flights. The data are freely available at the [Bureau of Transportation Statistics](https://www.transtats.bts.gov/Tables.asp?DB_ID=120), with a data definition table [here](https://www.transtats.bts.gov/DatabaseInfo.asp?DB_ID=120&Link=0).
 
-Here we will analyze data for Sep 2016-Aug 2017.
+Here we will analyze data for Nov 2016-Oct 2017. We also filter the data by `ORIGIN_AIRPORT_ID`==11996 (the code for GSP) or `DEST_AIRPORT_ID`==11996 so that we focus only on the flights that go to or from GSP.
+
+I've already downloaded and merged the files into a single file (steps not shown). I load the file here, and use `ymd` from the `lubridate` package to turn the split date fields into a single date.
+
+```{r}
+
+load("airline_data.RData")
+airline_data %>% 
+  mutate(date=ymd(YEAR*10000+MONTH*100+DAY_OF_MONTH),
+         wnum = floor((date - ymd(YEAR*10000+0101))/7)) -> airline_data
+
+```
+
+# How many flights run per day?
+
+This is the number of flights departing per day from GSP.
+
+```{r}
+airline_data %>% 
+  filter(ORIGIN_AIRPORT_ID==11996) %>% 
+  count(date) -> counts_depart
+
+counts_depart %>% 
+  ggplot(aes(date,n)) +
+  geom_line() +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %y") +
+  ylab("Number of departing flights") +
+  xlab("")
+
+```
+
+There are clear patterns in this data, for example the dip in the first few months of the year, but we won't explore that further for now. Also note the use of the `scale_x_date` function above to print out pretty date labels. This function is very flexible with the use of the `date_breaks` and `date_labels` options able to clearly show any time scale needed.
+
+# Delays by departure time
+
+Delays can be some of the most frustrating experiences of travel. The conventional wisdom is that delays get worse as the day goes on, and the data bear that out. Here I filter out flights departing GSP, categorize them into flights before 6am, 6-9am, 9am-12pm, and so on in 3 hour increments until midnight. I think look at the number delayed at least 15 minutes vs. the total number in that time period, and look over all days. Here are the results.
+
+```{r}
+airline_data %>% 
+  filter(ORIGIN_AIRPORT_ID==11996) %>% 
+  mutate(time_bin = cut(CRS_DEP_TIME,breaks=c(0,600,900,1200,1500,1800,2100,2400),labels=c("6","9","12","15","18","21","24"),right=TRUE,ordered_result = TRUE)) -> delay_by_hour
+
+delay_by_hour %>% 
+  group_by(time_bin) %>% 
+  summarize(total=n(),delayed=sum(DEP_DELAY>15 | is.na(DEP_DELAY),na.rm=TRUE),percent_delay = delayed/total) %>% 
+  ungroup() %>% 
+  ggplot(aes(time_bin,percent_delay)) +
+  geom_bar(stat="identity") +
+  scale_y_continuous(breaks=seq(0,1,by=0.2),labels=sprintf("%3d%%",seq(0,100,by=20))) +
+  scale_x_discrete(labels=function(x) sprintf("%2s:00",x)) +
+  ylab("Percent delayed") + xlab("Scheduled time of departure")
+
+```
+
+If you want your flight on time, be an early bird.
+
+# Delays by day of the week
+
+If your travel plans are flexible, you might try to schedule on a different day of the week to avoid delays. The effect, however, is small, and there may be better reasons to prefer one day of the week over another (e.g. work and cost).
+
+```{r}
+delay_by_hour %>% 
+  group_by(DAY_OF_WEEK) %>% 
+  summarize(total=n(),delayed=sum(DEP_DELAY>15 | is.na(DEP_DELAY),na.rm=TRUE),percent_delay = delayed/total) %>% 
+  ungroup() %>% 
+  ggplot(aes(DAY_OF_WEEK,percent_delay)) +
+  geom_bar(stat="identity") +
+  scale_y_continuous(breaks=seq(0,1,by=0.2),labels=sprintf("%3d%%",seq(0,100,by=20))) +
+  scale_x_continuous(breaks=1:7,labels=function(x) c("Sun","Mon","Tue","Wed","Thu","Fri","Sat","Sun")[x]) +
+  ylab("Percent delayed") + xlab("Scheduled day of week")
+
+```
+
+# Number of flights by week day
+
+Here we compare the number of flights by the average number of flights in that week to uncover the weekday pattern.
+
+```{r}
+airline_data %>% 
+  group_by(wnum,DAY_OF_WEEK,date) %>% 
+  summarize(n=n()) %>% 
+  group_by(wnum) %>% 
+  mutate(week_avg = rep(mean(n,na.rm=TRUE),length(n)),
+         deviation = n - week_avg) -> weekly_deviations
+
+weekly_deviations %>% 
+  ggplot(aes(DAY_OF_WEEK,deviation)) +
+  stat_summary(fun.data="median_hilow",geom="pointrange") +
+  scale_x_continuous(breaks=1:7,labels=function(x) c("Sun","Mon","Tue","Wed","Thu","Fri","Sat","Sun")[x]) +
+  ylab("Difference between number of scheduled flights\nand weekly average") + xlab("")
+
+```
+
+Fridays and Saturdays tend to run fewer flights than other days, so if you can plan your trip in advance and like to avoid crowds, these are the two days to aim for.
+
+Note here that the strategy I used with `ggplot2` is slightly different from the conventional bar plot or line plot. In this case, I knew I would be plotting a range of values by week day, so I used the `stat_summary` function in `ggplot2` with a geom of "pointrange". This geom plots the point at a central location and a thinner-looking segment. In this case, because my function was `median_hilow`, the point is the median of `deviation` within `DAY_OF_WEEK`, and the segment covers from the low to the high value of `deviation` within `DAY_OF_WEEK`. Other functions, such as those showing mean plus or minus one standard error, could have been used. `stat_summary` is a useful function for showing summary statistics on graphs when you don't want to compute them by hand. The [reference page](http://ggplot2.tidyverse.org/reference/stat_summary.html) over at the Tidyverse website shows a couple of other use cases.
+
+# Discussion
+
+I downloaded (by hand, one month at a time) a number of flight records from the Bureau of Transportation statistics, and narrowed the database down to flights departing from or arriving at GSP airport. With a few short data manipulation steps and the `ggplot2` data visualization package I uncovered some interesting patterns in the number of flights and delayed flights.

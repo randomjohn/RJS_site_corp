@@ -16,7 +16,7 @@ copyright = "(c) RJS Data Science LLC"
     address = ""
     year = 2017
     background = ""
-    favicon = "images/gt_favicon.png"
+    favicon = "images/logo_favicon.png"
     DateForm = "January 2, 2006"
 
     showSubheader = true

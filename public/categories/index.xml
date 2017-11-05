@@ -2,21 +2,21 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Categories on RJS Data Science</title>
-    <link>http://www.rjsdatascience.com/categories/</link>
+    <link>/categories/</link>
     <description>Recent content in Categories on RJS Data Science</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>(c) RJS Data Science LLC</copyright>
     
-	<atom:link href="http://www.rjsdatascience.com/categories/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="/categories/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>Greenville</title>
-      <link>http://www.rjsdatascience.com/categories/greenville/</link>
-      <pubDate>Sun, 24 Sep 2017 00:00:00 +0000</pubDate>
+      <link>/categories/greenville/</link>
+      <pubDate>Sat, 04 Nov 2017 00:00:00 +0000</pubDate>
       
-      <guid>http://www.rjsdatascience.com/categories/greenville/</guid>
+      <guid>/categories/greenville/</guid>
       <description></description>
     </item>
     

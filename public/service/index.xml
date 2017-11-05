@@ -2,21 +2,21 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Services on RJS Data Science</title>
-    <link>http://www.rjsdatascience.com/service/</link>
+    <link>/service/</link>
     <description>Recent content in Services on RJS Data Science</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>(c) RJS Data Science LLC</copyright>
     
-	<atom:link href="http://www.rjsdatascience.com/service/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="/service/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>Effective communication</title>
-      <link>http://www.rjsdatascience.com/service/service4/</link>
+      <link>/service/service4/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>http://www.rjsdatascience.com/service/service4/</guid>
+      <guid>/service/service4/</guid>
       <description>&lt;p&gt;Help others understand your decisions.&lt;/p&gt;
 
 &lt;p&gt;&lt;/p&gt;</description>
@@ -24,10 +24,10 @@
     
     <item>
       <title>Exploratory data analysis</title>
-      <link>http://www.rjsdatascience.com/service/service1/</link>
+      <link>/service/service1/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>http://www.rjsdatascience.com/service/service1/</guid>
+      <guid>/service/service1/</guid>
       <description>&lt;p&gt;Quickly learn from your data.&lt;/p&gt;
 
 &lt;p&gt;&lt;/p&gt;</description>
@@ -35,10 +35,10 @@
     
     <item>
       <title>Predictive modeling</title>
-      <link>http://www.rjsdatascience.com/service/service2/</link>
+      <link>/service/service2/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>http://www.rjsdatascience.com/service/service2/</guid>
+      <guid>/service/service2/</guid>
       <description>&lt;p&gt;Inform future decisions using your data.&lt;/p&gt;
 
 &lt;p&gt;&lt;/p&gt;</description>
@@ -46,10 +46,10 @@
     
     <item>
       <title>Reproducible workflows</title>
-      <link>http://www.rjsdatascience.com/service/service3/</link>
+      <link>/service/service3/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>http://www.rjsdatascience.com/service/service3/</guid>
+      <guid>/service/service3/</guid>
       <description>&lt;p&gt;Reproduce and improve your analyses.&lt;/p&gt;
 
 &lt;p&gt;&lt;/p&gt;</description>

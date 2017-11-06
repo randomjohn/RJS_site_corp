@@ -10,6 +10,6 @@ Inform future decisions using your data.
 ![](images/fortune.png)
 
 
-A rigorous predictive modeling approach can illuminate the power &emdash; and the limitations &emdata; of your data in decision making. Inform the optimal decision while guarding against overconfidence and bias.
+A rigorous predictive modeling approach can illuminate the power &emdash; and the limitations -- of your data in decision making. Inform the optimal decision while guarding against overconfidence and bias.
 
 _Image credit: me! (c) 2017_

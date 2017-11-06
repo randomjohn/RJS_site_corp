@@ -15,6 +15,12 @@ I explore the acquisition, preparation, and analysis of data from public sources
 
 The [Upstate Data Science and Analytics group](https://www.meetup.com/Greenville-Data-Science-Analytics-Meetup/) meets (mostly) monthly.
 
+# Education and experience
+
+ * Ph.D., Statistics, University of North Carolina at Chapel Hill
+ * 4 years experience at SAS Institute
+ * 15 years experience in pharmaceutical research
+
 # Contact me
 
 [john@rjsdatascience.com](mailto:john@rjsdatascience.com)

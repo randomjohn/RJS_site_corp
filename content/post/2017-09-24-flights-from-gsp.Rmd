@@ -9,8 +9,7 @@ tags:
 draft: no
 ---
 
-```{r setup}
-knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+```{r setup, message=FALSE}
 library(tidyverse)
 library(lubridate)
 ```

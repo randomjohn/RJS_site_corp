@@ -1,0 +1,112 @@
+---
+title: Analyzing GSP flights using Bayesian analysis with Stan
+author: John Johnson
+date: '2018-01-10'
+slug: analyzing-gsp-flights-using-bayesian-analysis-with-stan
+categories:
+  - Greenville
+tags:
+  - flights
+  - Bayesian
+draft: true
+---
+
+# Introduction and purpose
+
+This is a new series on Bayesian analysis using Stan, and, specifically, the R interface to Stan. Even if you don't want to use the R interface to Stan, much of the actual Stan code may still apply to you, but for now you are on your own getting data into and back out.
+
+Bayesian analysis can be described in several different ways, all of which offer useful ways of thinking about problems. It requires a little bit of a paradigm shift if you are used to classical statistics or machine learning. For one thing, everything is assumed to be described by a random variable. For instance, if you are analyzing the height of all women in the world, we assume the height of any individual is random, but we also assume that the population average (a "parameter" or "unknown quantity" we might be trying to "estimate") is also random. (Some frameworks, including classical statistics, would assume it fixed but ultimately unknowable.) The purpose of this series is to get some hands-on experience with Bayesian analysis and bring some of these theoretical ideas more concrete, so they can be used for practical, real-world cases.
+
+We'll start simple and work our way to more complex cases over time. During this series, we'll encounter some philosophical struggles, some more practical matters, and some computing issues that will make us try different approaches.
+
+In a [previous post](/post/2017-09-24-flights-from-gsp/), I analyzed the number of departing flights from the local Upstate airport GSP (Greenville-Spartanburg International). There were some interesting patterns in the data. I think it will serve as an interesting launch point for a new series on using the Stan package for Bayesian analysis.
+
+# Installation
+
+First, you'll need to install R, if you don't have it. Head over to http://www.r-project.org if you don't. I also install the Rstudio (http://www.rstudio.com) IDE for R, because it has a lot of nice features (including integrating R code in blogging!).
+
+Once you have R, you will need to install the `rstan` package. (While you're at it, pick up the `rstanarm` package as well, for later on.)  For readability of data manipulation, I'll use `dplyr` and related packages (collectively known as the "tidyverse"). Use `install.packages(c("rstan","rstanarm","tidyverse","lubridate"))` to get these packages; all relevant dependencies will be installed. (I also use the `lubridate` package to manage some of the strange date formats -- I understand it will be included in `tidyverse` at a later date). For more information on the tidyverse packages, go over to http://tidyverse.org, but after you've finished reading about Stan here :).
+
+And now we begin.
+
+# Setup and data
+
+First we load our packages.
+
+```{r setup, message=FALSE}
+library(tidyverse)
+library(lubridate)
+library(rstan)
+```
+
+The `tidyverse` package will load a number of packages, including `dplyr` and `lubridate`. `dplyr` is a very nice package which performs data manipulation in an intuitive fashion, including the use of the pipe `%>%` operator which you will see in action. I turned off the rather verbose messages for the purposes of blogging, but if you are familiar with R you may want to review them for some gotchas.
+
+One thing you notice as you load `rstan` is the following:
+
+```
+Loading required package: StanHeaders
+rstan (Version 2.17.2, GitRev: 2e1f913d3ca3)
+For execution on a local, multicore CPU with excess RAM we recommend calling
+options(mc.cores = parallel::detectCores()).
+To avoid recompilation of unchanged Stan programs, we recommend calling
+rstan_options(auto_write = TRUE)
+
+Attaching package: 'rstan'
+```
+
+Chances are, you have at least a dual core machine. So run the suggested code:
+
+```{r mc_cores}
+options(mc.cores = parallel::detectCores())
+```
+
+
+Now, as before, I load the data:
+
+```{r load_data}
+load("airline_data.RData")
+airline_data %>% 
+  mutate(date=ymd(YEAR*10000+MONTH*100+DAY_OF_MONTH),
+         wnum = floor((date - ymd(YEAR*10000+0101))/7)) -> 
+  airline_data
+
+airline_data %>% 
+  filter(ORIGIN_AIRPORT_ID==11996) %>% 
+  count(date) -> 
+  counts_depart
+
+counts_depart %>% 
+  ggplot(aes(date,n)) +
+  geom_line() +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %y") +
+  ylab("Number of departing flights") +
+  xlab("")
+```
+
+This code, [as before](/post/2017-09-24-flights-from-gsp/), loads the airline data and converts the rather strange date format to a date format that R can use. (See the linked post for more details -- I more or less copied the first part of the code.) I then display the counts again just to show what we're working with. (Again, to obtain the original csv data, refer to the linked post.)
+
+# Simple model of how many flights per day
+
+So, to start, we will start with a very simple model of the number of flights per day: a mean plus some noise. If this rankles because of the rich structure you saw in the plot above, well that's a good sign but for now you can be patient. This is a series, after all, and we'll get to all that. But for now, we're introducing Stan and progressing from simple to more complex models. This is a path you might take with other examples, after all.
+
+So the model is
+
+$$flights = \scr{N}(\mu,\sigma)$$
+where $\scr{N}$ is the normal distribution, $\mu$ is some average number of flights, and $\sigma$ is the standard deviation of some random noise. 
+
+One of the joys of Stan is that this equation translates directly into a model:
+
+```
+parameters {
+  real mu;
+  real sigma;
+}
+
+model {
+  flights ~ normal(mu,sigma);
+}
+```
+
+(If you're into statistics, you might read the `~` as "is distributed as".)
+
+In fact, the Stan code is nearly written by the above. We mainly need to connect the data with the model through the `flights` variable.

@@ -18,7 +18,7 @@
 						{{ .Summary }}
 						{{ if .Truncated }}
 						<div>
-							<a href="{{ .RelPermalink }}">Read More&#8230;</a>
+							<a href="{{ .RelPermalink }}">Read More&dots;</a>
 						</div>
 						{{ end }}
 					</div>

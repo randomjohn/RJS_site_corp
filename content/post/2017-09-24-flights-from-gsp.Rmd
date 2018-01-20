@@ -16,7 +16,11 @@ library(lubridate)
 
 # Introduction
 
-Holiday season is upon us, and many of us fly to see family. Taking flights is also a huge headache, especially with the large crowds in airports, frustrated people, and *delays*. Oh the delays! It might be helpful to have a heads up on what to avoid to minimize your frustration. Fortunately, we can get a head start on what to avoid
+Holiday season is upon us, and many of us fly to see family. Taking flights is also a huge headache, especially with the large crowds in airports, frustrated people, and *delays*. Oh the delays! It might be helpful to have a heads up on what to avoid to minimize your frustration. Fortunately, we can get a head start on what to avoid.
+
+<!--more-->
+
+# Setup and data
 
 Flight analysis is everywhere these days because the increase of the power of computer enables us to analyze a large number of data points, and there are a large number of flights. The data are freely available at the [Bureau of Transportation Statistics](https://www.transtats.bts.gov/Tables.asp?DB_ID=120), with a data definition table [here](https://www.transtats.bts.gov/DatabaseInfo.asp?DB_ID=120&Link=0).
 

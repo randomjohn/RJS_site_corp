@@ -15,7 +15,11 @@ draft: no
 library(lubridate)</code></pre>
 <section id="introduction" class="level1">
 <h1>Introduction</h1>
-<p>Holiday season is upon us, and many of us fly to see family. Taking flights is also a huge headache, especially with the large crowds in airports, frustrated people, and <em>delays</em>. Oh the delays! It might be helpful to have a heads up on what to avoid to minimize your frustration. Fortunately, we can get a head start on what to avoid</p>
+<p>Holiday season is upon us, and many of us fly to see family. Taking flights is also a huge headache, especially with the large crowds in airports, frustrated people, and <em>delays</em>. Oh the delays! It might be helpful to have a heads up on what to avoid to minimize your frustration. Fortunately, we can get a head start on what to avoid.</p>
+<!--more-->
+</section>
+<section id="setup-and-data" class="level1">
+<h1>Setup and data</h1>
 <p>Flight analysis is everywhere these days because the increase of the power of computer enables us to analyze a large number of data points, and there are a large number of flights. The data are freely available at the <a href="https://www.transtats.bts.gov/Tables.asp?DB_ID=120">Bureau of Transportation Statistics</a>, with a data definition table <a href="https://www.transtats.bts.gov/DatabaseInfo.asp?DB_ID=120&amp;Link=0">here</a>.</p>
 <p>Here we will analyze data for Nov 2016-Oct 2017. We also filter the data by <code>ORIGIN_AIRPORT_ID</code>==11996 (the code for GSP) or <code>DEST_AIRPORT_ID</code>==11996 so that we focus only on the flights that go to or from GSP.</p>
 <p>I’ve already downloaded and merged the files into a single file (steps not shown). I load the file here, and use <code>ymd</code> from the <code>lubridate</code> package to turn the split date fields into a single date.</p>

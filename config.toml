@@ -5,6 +5,8 @@ theme = "hugo-initio"
 publishDir = "public"
 ignoreFiles = ["\\.Rmd$", "_files$", "_cache$"]
 copyright = "(c) RJS Data Science LLC"
+paginate = 10
+paginatePath = "page"
 
 [params]
     name = "RJS Data Science LLC"

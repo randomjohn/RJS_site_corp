@@ -17,7 +17,6 @@
 					<div class="entry-content">
 						{{ .Content }}
 					</div>
-					{{ partial "post/tag/list.html" . }}
 				</article><!-- #post-## -->
 
 			</div>

@@ -19,6 +19,7 @@ draft: yes
 <p>This is a new series on Bayesian analysis using Stan, and, specifically, the R interface to Stan. Even if you don’t want to use the R interface to Stan, much of the actual Stan code may still apply to you, but for now you are on your own getting data into and back out.</p>
 <p>Bayesian analysis can be described in several different ways, all of which offer useful ways of thinking about problems. It requires a little bit of a paradigm shift if you are used to classical statistics or machine learning. For one thing, everything is assumed to be described by a random variable. For instance, if you are analyzing the height of all women in the world, we assume the height of any individual is random, but we also assume that the population average (a “parameter” or “unknown quantity” we might be trying to “estimate”) is also random. (Some frameworks, including classical statistics, would assume it fixed but ultimately unknowable.) The purpose of this series is to get some hands-on experience with Bayesian analysis and bring some of these theoretical ideas more concrete, so they can be used for practical, real-world cases.</p>
 <p>We’ll start simple and work our way to more complex cases over time. During this series, we’ll encounter some philosophical struggles, some more practical matters, and some computing issues that will make us try different approaches.</p>
+<!--more-->
 <p>In a <a href="/post/2017-09-24-flights-from-gsp/">previous post</a>, I analyzed the number of departing flights from the local Upstate airport GSP (Greenville-Spartanburg International). There were some interesting patterns in the data. I think it will serve as an interesting launch point for a new series on using the Stan package for Bayesian analysis.</p>
 </section>
 <section id="installation" class="level1">
@@ -26,6 +27,7 @@ draft: yes
 <p>First, you’ll need to install R, if you don’t have it. Head over to <a href="http://www.r-project.org" class="uri">http://www.r-project.org</a> if you don’t. I also install the Rstudio (<a href="http://www.rstudio.com" class="uri">http://www.rstudio.com</a>) IDE for R, because it has a lot of nice features (including integrating R code in blogging!).</p>
 <p>Once you have R, you will need to install the <code>rstan</code> package. (While you’re at it, pick up the <code>rstanarm</code> package as well, for later on.) For readability of data manipulation, I’ll use <code>dplyr</code> and related packages (collectively known as the “tidyverse”). Use <code>install.packages(c(&quot;rstan&quot;,&quot;rstanarm&quot;,&quot;tidyverse&quot;,&quot;lubridate&quot;))</code> to get these packages; all relevant dependencies will be installed. (I also use the <code>lubridate</code> package to manage some of the strange date formats – I understand it will be included in <code>tidyverse</code> at a later date). For more information on the tidyverse packages, go over to <a href="http://tidyverse.org" class="uri">http://tidyverse.org</a>, but after you’ve finished reading about Stan here :).</p>
 <p>And now we begin.</p>
+<!--more-->
 </section>
 <section id="setup-and-data" class="level1">
 <h1>Setup and data</h1>
@@ -144,54 +146,6 @@ flights &lt;- counts_depart$n
 
 data_to_pass &lt;- c(&quot;ndates&quot;,&quot;flights&quot;)
 mean_model_fit &lt;- stan(&quot;flights.stan&quot;,data=data_to_pass)</code></pre>
-<pre><code>## recompiling to avoid crashing R session</code></pre>
-<pre><code>## In file included from C:/Users/johnd/Documents/R/win-library/3.4/BH/include/boost/config.hpp:39:0,
-##                  from C:/Users/johnd/Documents/R/win-library/3.4/BH/include/boost/math/tools/config.hpp:13,
-##                  from C:/Users/johnd/Documents/R/win-library/3.4/StanHeaders/include/stan/math/rev/core/var.hpp:7,
-##                  from C:/Users/johnd/Documents/R/win-library/3.4/StanHeaders/include/stan/math/rev/core/gevv_vvv_vari.hpp:5,
-##                  from C:/Users/johnd/Documents/R/win-library/3.4/StanHeaders/include/stan/math/rev/core.hpp:12,
-##                  from C:/Users/johnd/Documents/R/win-library/3.4/StanHeaders/include/stan/math/rev/mat.hpp:4,
-##                  from C:/Users/johnd/Documents/R/win-library/3.4/StanHeaders/include/stan/math.hpp:4,
-##                  from C:/Users/johnd/Documents/R/win-library/3.4/StanHeaders/include/src/stan/model/model_header.hpp:4,
-##                  from file3e3c21af2aaa.cpp:8:
-## C:/Users/johnd/Documents/R/win-library/3.4/BH/include/boost/config/compiler/gcc.hpp:186:0: warning: &quot;BOOST_NO_CXX11_RVALUE_REFERENCES&quot; redefined
-##  #  define BOOST_NO_CXX11_RVALUE_REFERENCES
-##  ^
-## &lt;command-line&gt;:0:0: note: this is the location of the previous definition
-## In file included from C:/Users/johnd/Documents/R/win-library/3.4/BH/include/boost/multi_array/base.hpp:28:0,
-##                  from C:/Users/johnd/Documents/R/win-library/3.4/BH/include/boost/multi_array.hpp:21,
-##                  from C:/Users/johnd/Documents/R/win-library/3.4/BH/include/boost/numeric/odeint/util/multi_array_adaption.hpp:29,
-##                  from C:/Users/johnd/Documents/R/win-library/3.4/BH/include/boost/numeric/odeint.hpp:61,
-##                  from C:/Users/johnd/Documents/R/win-library/3.4/StanHeaders/include/stan/math/prim/arr/functor/integrate_ode_rk45.hpp:17,
-##                  from C:/Users/johnd/Documents/R/win-library/3.4/StanHeaders/include/stan/math/prim/arr.hpp:38,
-##                  from C:/Users/johnd/Documents/R/win-library/3.4/StanHeaders/include/stan/math/prim/mat.hpp:298,
-##                  from C:/Users/johnd/Documents/R/win-library/3.4/StanHeaders/include/stan/math/rev/mat.hpp:12,
-##                  from C:/Users/johnd/Documents/R/win-library/3.4/StanHeaders/include/stan/math.hpp:4,
-##                  from C:/Users/johnd/Documents/R/win-library/3.4/StanHeaders/include/src/stan/model/model_header.hpp:4,
-##                  from file3e3c21af2aaa.cpp:8:
-## C:/Users/johnd/Documents/R/win-library/3.4/BH/include/boost/multi_array/concept_checks.hpp: In static member function &#39;static void boost::multi_array_concepts::detail::idgen_helper&lt;N&gt;::call(Array&amp;, const IdxGen&amp;, Call_Type)&#39;:
-## C:/Users/johnd/Documents/R/win-library/3.4/BH/include/boost/multi_array/concept_checks.hpp:42:43: warning: typedef &#39;index_range&#39; locally defined but not used [-Wunused-local-typedefs]
-##        typedef typename Array::index_range index_range;
-##                                            ^
-## C:/Users/johnd/Documents/R/win-library/3.4/BH/include/boost/multi_array/concept_checks.hpp:43:37: warning: typedef &#39;index&#39; locally defined but not used [-Wunused-local-typedefs]
-##        typedef typename Array::index index;
-##                                      ^
-## C:/Users/johnd/Documents/R/win-library/3.4/BH/include/boost/multi_array/concept_checks.hpp: In static member function &#39;static void boost::multi_array_concepts::detail::idgen_helper&lt;0ull&gt;::call(Array&amp;, const IdxGen&amp;, Call_Type)&#39;:
-## C:/Users/johnd/Documents/R/win-library/3.4/BH/include/boost/multi_array/concept_checks.hpp:53:43: warning: typedef &#39;index_range&#39; locally defined but not used [-Wunused-local-typedefs]
-##        typedef typename Array::index_range index_range;
-##                                            ^
-## C:/Users/johnd/Documents/R/win-library/3.4/BH/include/boost/multi_array/concept_checks.hpp:54:37: warning: typedef &#39;index&#39; locally defined but not used [-Wunused-local-typedefs]
-##        typedef typename Array::index index;
-##                                      ^
-## In file included from C:/Users/johnd/Documents/R/win-library/3.4/StanHeaders/include/stan/math/rev/core.hpp:44:0,
-##                  from C:/Users/johnd/Documents/R/win-library/3.4/StanHeaders/include/stan/math/rev/mat.hpp:4,
-##                  from C:/Users/johnd/Documents/R/win-library/3.4/StanHeaders/include/stan/math.hpp:4,
-##                  from C:/Users/johnd/Documents/R/win-library/3.4/StanHeaders/include/src/stan/model/model_header.hpp:4,
-##                  from file3e3c21af2aaa.cpp:8:
-## C:/Users/johnd/Documents/R/win-library/3.4/StanHeaders/include/stan/math/rev/core/set_zero_all_adjoints.hpp: At global scope:
-## C:/Users/johnd/Documents/R/win-library/3.4/StanHeaders/include/stan/math/rev/core/set_zero_all_adjoints.hpp:14:17: warning: &#39;void stan::math::set_zero_all_adjoints()&#39; defined but not used [-Wunused-function]
-##      static void set_zero_all_adjoints() {
-##                  ^</code></pre>
 </section>
 <section id="results" class="level2">
 <h2>Results</h2>
@@ -202,15 +156,15 @@ mean_model_fit &lt;- stan(&quot;flights.stan&quot;,data=data_to_pass)</code></pr
 ## post-warmup draws per chain=1000, total post-warmup draws=4000.
 ## 
 ##          mean se_mean   sd    2.5%     25%     50%     75%   97.5% n_eff
-## mu      17.32    0.00 0.22   16.88   17.18   17.32   17.47   17.75  3266
-## sigma    3.91    0.00 0.15    3.63    3.81    3.90    4.01    4.21  3693
-## lp__  -623.16    0.02 1.02 -625.81 -623.58 -622.84 -622.42 -622.17  1781
+## mu      17.33    0.00 0.22   16.90   17.18   17.33   17.48   17.74  3934
+## sigma    3.91    0.00 0.15    3.62    3.81    3.90    4.01    4.22  3854
+## lp__  -623.16    0.02 1.00 -625.85 -623.57 -622.85 -622.44 -622.16  1738
 ##       Rhat
 ## mu       1
 ## sigma    1
 ## lp__     1
 ## 
-## Samples were drawn using NUTS(diag_e) at Sat Jan 20 14:28:46 2018.
+## Samples were drawn using NUTS(diag_e) at Sat Jan 20 17:41:29 2018.
 ## For each parameter, n_eff is a crude measure of effective sample size,
 ## and Rhat is the potential scale reduction factor on split chains (at 
 ## convergence, Rhat=1).</code></pre>

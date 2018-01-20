@@ -20,6 +20,8 @@ Bayesian analysis can be described in several different ways, all of which offer
 
 We'll start simple and work our way to more complex cases over time. During this series, we'll encounter some philosophical struggles, some more practical matters, and some computing issues that will make us try different approaches.
 
+<!--more-->
+
 In a [previous post](/post/2017-09-24-flights-from-gsp/), I analyzed the number of departing flights from the local Upstate airport GSP (Greenville-Spartanburg International). There were some interesting patterns in the data. I think it will serve as an interesting launch point for a new series on using the Stan package for Bayesian analysis.
 
 # Installation
@@ -29,6 +31,8 @@ First, you'll need to install R, if you don't have it. Head over to http://www.r
 Once you have R, you will need to install the `rstan` package. (While you're at it, pick up the `rstanarm` package as well, for later on.)  For readability of data manipulation, I'll use `dplyr` and related packages (collectively known as the "tidyverse"). Use `install.packages(c("rstan","rstanarm","tidyverse","lubridate"))` to get these packages; all relevant dependencies will be installed. (I also use the `lubridate` package to manage some of the strange date formats -- I understand it will be included in `tidyverse` at a later date). For more information on the tidyverse packages, go over to http://tidyverse.org, but after you've finished reading about Stan here :).
 
 And now we begin.
+
+<!--more-->
 
 # Setup and data
 

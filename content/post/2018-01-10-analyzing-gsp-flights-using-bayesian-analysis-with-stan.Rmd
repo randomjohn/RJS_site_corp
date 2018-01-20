@@ -1,7 +1,7 @@
 ---
 title: Analyzing GSP flights using Bayesian analysis with Stan
 author: John Johnson
-date: '2018-01-10'
+date: '2018-01-15'
 categories:
   - Greenville
 tags:

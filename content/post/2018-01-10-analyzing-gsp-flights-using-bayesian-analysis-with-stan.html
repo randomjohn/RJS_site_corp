@@ -1,7 +1,7 @@
 ---
 title: Analyzing GSP flights using Bayesian analysis with Stan
 author: John Johnson
-date: '2018-01-10'
+date: '2018-01-15'
 categories:
   - Greenville
 tags:
@@ -156,15 +156,15 @@ mean_model_fit &lt;- stan(&quot;flights.stan&quot;,data=data_to_pass)</code></pr
 ## post-warmup draws per chain=1000, total post-warmup draws=4000.
 ## 
 ##          mean se_mean   sd    2.5%     25%     50%     75%   97.5% n_eff
-## mu      17.33    0.00 0.22   16.90   17.18   17.33   17.48   17.74  3934
-## sigma    3.91    0.00 0.15    3.62    3.81    3.90    4.01    4.22  3854
-## lp__  -623.16    0.02 1.00 -625.85 -623.57 -622.85 -622.44 -622.16  1738
+## mu      17.33    0.00 0.22   16.91   17.18   17.33   17.47   17.75  3018
+## sigma    3.91    0.00 0.15    3.64    3.80    3.91    4.01    4.21  3546
+## lp__  -623.15    0.02 1.02 -625.94 -623.55 -622.84 -622.44 -622.17  1820
 ##       Rhat
 ## mu       1
 ## sigma    1
 ## lp__     1
 ## 
-## Samples were drawn using NUTS(diag_e) at Sat Jan 20 17:41:29 2018.
+## Samples were drawn using NUTS(diag_e) at Sat Jan 20 17:45:37 2018.
 ## For each parameter, n_eff is a crude measure of effective sample size,
 ## and Rhat is the potential scale reduction factor on split chains (at 
 ## convergence, Rhat=1).</code></pre>

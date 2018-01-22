@@ -9,7 +9,7 @@ tags:
   - flights
   - Stan
 slug: analyzing-gsp-flights-using-bayesian-analysis-with-stan
-draft: yes
+draft: no
 ---
 
 # Introduction and purpose
@@ -19,6 +19,8 @@ This is a new series on Bayesian analysis using Stan, and, specifically, the R i
 Bayesian analysis can be described in several different ways, all of which offer useful ways of thinking about problems. It requires a little bit of a paradigm shift if you are used to classical statistics or machine learning. For one thing, everything is assumed to be described by a random variable. For instance, if you are analyzing the height of all women in the world, we assume the height of any individual is random, but we also assume that the population average (a "parameter" or "unknown quantity" we might be trying to "estimate") is also random. (Some frameworks, including classical statistics, would assume it fixed but ultimately unknowable.) The purpose of this series is to get some hands-on experience with Bayesian analysis and bring some of these theoretical ideas more concrete, so they can be used for practical, real-world cases.
 
 We'll start simple and work our way to more complex cases over time. During this series, we'll encounter some philosophical struggles, some more practical matters, and some computing issues that will make us try different approaches.
+
+One note: you can get help on `rstan` by using `help("rstan")` once you've loaded the package. For some reason, they seem to use partial pooling as the simplest example, and while partial pooling is important, it might be a little confusing while you are getting started. I get a lot simpler here.
 
 <!--more-->
 

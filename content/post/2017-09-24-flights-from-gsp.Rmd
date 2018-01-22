@@ -9,11 +9,6 @@ tags:
 draft: no
 ---
 
-```{r setup, message=FALSE}
-library(tidyverse)
-library(lubridate)
-```
-
 # Introduction
 
 Holiday season is upon us, and many of us fly to see family. Taking flights is also a huge headache, especially with the large crowds in airports, frustrated people, and *delays*. Oh the delays! It might be helpful to have a heads up on what to avoid to minimize your frustration. Fortunately, we can get a head start on what to avoid.
@@ -27,6 +22,11 @@ Flight analysis is everywhere these days because the increase of the power of co
 Here we will analyze data for Nov 2016-Oct 2017. We also filter the data by `ORIGIN_AIRPORT_ID`==11996 (the code for GSP) or `DEST_AIRPORT_ID`==11996 so that we focus only on the flights that go to or from GSP.
 
 I've already downloaded and merged the files into a single file (steps not shown). I load the file here, and use `ymd` from the `lubridate` package to turn the split date fields into a single date.
+
+```{r setup, message=FALSE}
+library(tidyverse)
+library(lubridate)
+```
 
 ```{r}
 

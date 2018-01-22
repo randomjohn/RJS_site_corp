@@ -9,7 +9,7 @@ tags:
   - flights
   - Stan
 slug: analyzing-gsp-flights-using-bayesian-analysis-with-stan
-draft: yes
+draft: no
 ---
 
 
@@ -19,6 +19,7 @@ draft: yes
 <p>This is a new series on Bayesian analysis using Stan, and, specifically, the R interface to Stan. Even if you don’t want to use the R interface to Stan, much of the actual Stan code may still apply to you, but for now you are on your own getting data into and back out.</p>
 <p>Bayesian analysis can be described in several different ways, all of which offer useful ways of thinking about problems. It requires a little bit of a paradigm shift if you are used to classical statistics or machine learning. For one thing, everything is assumed to be described by a random variable. For instance, if you are analyzing the height of all women in the world, we assume the height of any individual is random, but we also assume that the population average (a “parameter” or “unknown quantity” we might be trying to “estimate”) is also random. (Some frameworks, including classical statistics, would assume it fixed but ultimately unknowable.) The purpose of this series is to get some hands-on experience with Bayesian analysis and bring some of these theoretical ideas more concrete, so they can be used for practical, real-world cases.</p>
 <p>We’ll start simple and work our way to more complex cases over time. During this series, we’ll encounter some philosophical struggles, some more practical matters, and some computing issues that will make us try different approaches.</p>
+<p>One note: you can get help on <code>rstan</code> by using <code>help(&quot;rstan&quot;)</code> once you’ve loaded the package. For some reason, they seem to use partial pooling as the simplest example, and while partial pooling is important, it might be a little confusing while you are getting started. I get a lot simpler here.</p>
 <!--more-->
 <p>In a <a href="/post/2017-09-24-flights-from-gsp/">previous post</a>, I analyzed the number of departing flights from the local Upstate airport GSP (Greenville-Spartanburg International). There were some interesting patterns in the data. I think it will serve as an interesting launch point for a new series on using the Stan package for Bayesian analysis.</p>
 </section>
@@ -156,15 +157,15 @@ mean_model_fit &lt;- stan(&quot;flights.stan&quot;,data=data_to_pass)</code></pr
 ## post-warmup draws per chain=1000, total post-warmup draws=4000.
 ## 
 ##          mean se_mean   sd    2.5%     25%     50%     75%   97.5% n_eff
-## mu      17.33    0.00 0.22   16.91   17.18   17.33   17.47   17.75  3018
-## sigma    3.91    0.00 0.15    3.64    3.80    3.91    4.01    4.21  3546
-## lp__  -623.15    0.02 1.02 -625.94 -623.55 -622.84 -622.44 -622.17  1820
+## mu      17.33    0.00 0.21   16.90   17.19   17.33   17.47   17.75  3172
+## sigma    3.91    0.00 0.15    3.63    3.81    3.90    4.00    4.21  2835
+## lp__  -623.12    0.03 1.00 -625.94 -623.49 -622.81 -622.41 -622.16  1482
 ##       Rhat
 ## mu       1
 ## sigma    1
 ## lp__     1
 ## 
-## Samples were drawn using NUTS(diag_e) at Sat Jan 20 17:45:37 2018.
+## Samples were drawn using NUTS(diag_e) at Sat Jan 20 18:51:15 2018.
 ## For each parameter, n_eff is a crude measure of effective sample size,
 ## and Rhat is the potential scale reduction factor on split chains (at 
 ## convergence, Rhat=1).</code></pre>

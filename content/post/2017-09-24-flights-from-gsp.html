@@ -11,12 +11,12 @@ draft: no
 
 
 
-<section id="introduction" class="level1">
+<div id="introduction" class="section level1">
 <h1>Introduction</h1>
 <p>Holiday season is upon us, and many of us fly to see family. Taking flights is also a huge headache, especially with the large crowds in airports, frustrated people, and <em>delays</em>. Oh the delays! It might be helpful to have a heads up on what to avoid to minimize your frustration. Fortunately, we can get a head start on what to avoid.</p>
 <!--more-->
-</section>
-<section id="setup-and-data" class="level1">
+</div>
+<div id="setup-and-data" class="section level1">
 <h1>Setup and data</h1>
 <p>Flight analysis is everywhere these days because the increase of the power of computer enables us to analyze a large number of data points, and there are a large number of flights. The data are freely available at the <a href="https://www.transtats.bts.gov/Tables.asp?DB_ID=120">Bureau of Transportation Statistics</a>, with a data definition table <a href="https://www.transtats.bts.gov/DatabaseInfo.asp?DB_ID=120&amp;Link=0">here</a>.</p>
 <p>Here we will analyze data for Nov 2016-Oct 2017. We also filter the data by <code>ORIGIN_AIRPORT_ID</code>==11996 (the code for GSP) or <code>DEST_AIRPORT_ID</code>==11996 so that we focus only on the flights that go to or from GSP.</p>
@@ -27,8 +27,8 @@ library(lubridate)</code></pre>
 airline_data %&gt;% 
   mutate(date=ymd(YEAR*10000+MONTH*100+DAY_OF_MONTH),
          wnum = floor((date - ymd(YEAR*10000+0101))/7)) -&gt; airline_data</code></pre>
-</section>
-<section id="how-many-flights-run-per-day" class="level1">
+</div>
+<div id="how-many-flights-run-per-day" class="section level1">
 <h1>How many flights run per day?</h1>
 <p>This is the number of flights departing per day from GSP.</p>
 <pre class="r"><code>airline_data %&gt;% 
@@ -41,10 +41,10 @@ counts_depart %&gt;%
   scale_x_date(date_breaks = &quot;1 month&quot;, date_labels = &quot;%b %y&quot;) +
   ylab(&quot;Number of departing flights&quot;) +
   xlab(&quot;&quot;)</code></pre>
-<p><img src="/post/2017-09-24-flights-from-gsp_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
+<p><img src="/rmarkdown-libs/figure-html4/unnamed-chunk-2-1.png" width="672" /></p>
 <p>There are clear patterns in this data, for example the dip in the first few months of the year, but we won’t explore that further for now. Also note the use of the <code>scale_x_date</code> function above to print out pretty date labels. This function is very flexible with the use of the <code>date_breaks</code> and <code>date_labels</code> options able to clearly show any time scale needed.</p>
-</section>
-<section id="delays-by-departure-time" class="level1">
+</div>
+<div id="delays-by-departure-time" class="section level1">
 <h1>Delays by departure time</h1>
 <p>Delays can be some of the most frustrating experiences of travel. The conventional wisdom is that delays get worse as the day goes on, and the data bear that out. Here I filter out flights departing GSP, categorize them into flights before 6am, 6-9am, 9am-12pm, and so on in 3 hour increments until midnight. I think look at the number delayed at least 15 minutes vs. the total number in that time period, and look over all days. Here are the results.</p>
 <pre class="r"><code>airline_data %&gt;% 
@@ -60,10 +60,10 @@ delay_by_hour %&gt;%
   scale_y_continuous(breaks=seq(0,1,by=0.2),labels=sprintf(&quot;%3d%%&quot;,seq(0,100,by=20))) +
   scale_x_discrete(labels=function(x) sprintf(&quot;%2s:00&quot;,x)) +
   ylab(&quot;Percent delayed&quot;) + xlab(&quot;Scheduled time of departure&quot;)</code></pre>
-<p><img src="/post/2017-09-24-flights-from-gsp_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+<p><img src="/rmarkdown-libs/figure-html4/unnamed-chunk-3-1.png" width="672" /></p>
 <p>If you want your flight on time, be an early bird.</p>
-</section>
-<section id="delays-by-day-of-the-week" class="level1">
+</div>
+<div id="delays-by-day-of-the-week" class="section level1">
 <h1>Delays by day of the week</h1>
 <p>If your travel plans are flexible, you might try to schedule on a different day of the week to avoid delays. The effect, however, is small, and there may be better reasons to prefer one day of the week over another (e.g. work and cost).</p>
 <pre class="r"><code>delay_by_hour %&gt;% 
@@ -75,9 +75,9 @@ delay_by_hour %&gt;%
   scale_y_continuous(breaks=seq(0,1,by=0.2),labels=sprintf(&quot;%3d%%&quot;,seq(0,100,by=20))) +
   scale_x_continuous(breaks=1:7,labels=function(x) c(&quot;Sun&quot;,&quot;Mon&quot;,&quot;Tue&quot;,&quot;Wed&quot;,&quot;Thu&quot;,&quot;Fri&quot;,&quot;Sat&quot;,&quot;Sun&quot;)[x]) +
   ylab(&quot;Percent delayed&quot;) + xlab(&quot;Scheduled day of week&quot;)</code></pre>
-<p><img src="/post/2017-09-24-flights-from-gsp_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
-</section>
-<section id="number-of-flights-by-week-day" class="level1">
+<p><img src="/rmarkdown-libs/figure-html4/unnamed-chunk-4-1.png" width="672" /></p>
+</div>
+<div id="number-of-flights-by-week-day" class="section level1">
 <h1>Number of flights by week day</h1>
 <p>Here we compare the number of flights by the average number of flights in that week to uncover the weekday pattern.</p>
 <pre class="r"><code>airline_data %&gt;% 
@@ -92,11 +92,11 @@ weekly_deviations %&gt;%
   stat_summary(fun.data=&quot;median_hilow&quot;,geom=&quot;pointrange&quot;) +
   scale_x_continuous(breaks=1:7,labels=function(x) c(&quot;Sun&quot;,&quot;Mon&quot;,&quot;Tue&quot;,&quot;Wed&quot;,&quot;Thu&quot;,&quot;Fri&quot;,&quot;Sat&quot;,&quot;Sun&quot;)[x]) +
   ylab(&quot;Difference between number of scheduled flights\nand weekly average&quot;) + xlab(&quot;&quot;)</code></pre>
-<p><img src="/post/2017-09-24-flights-from-gsp_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
+<p><img src="/rmarkdown-libs/figure-html4/unnamed-chunk-5-1.png" width="672" /></p>
 <p>Fridays and Saturdays tend to run fewer flights than other days, so if you can plan your trip in advance and like to avoid crowds, these are the two days to aim for.</p>
 <p>Note here that the strategy I used with <code>ggplot2</code> is slightly different from the conventional bar plot or line plot. In this case, I knew I would be plotting a range of values by week day, so I used the <code>stat_summary</code> function in <code>ggplot2</code> with a geom of “pointrange”. This geom plots the point at a central location and a thinner-looking segment. In this case, because my function was <code>median_hilow</code>, the point is the median of <code>deviation</code> within <code>DAY_OF_WEEK</code>, and the segment covers from the low to the high value of <code>deviation</code> within <code>DAY_OF_WEEK</code>. Other functions, such as those showing mean plus or minus one standard error, could have been used. <code>stat_summary</code> is a useful function for showing summary statistics on graphs when you don’t want to compute them by hand. The <a href="http://ggplot2.tidyverse.org/reference/stat_summary.html">reference page</a> over at the Tidyverse website shows a couple of other use cases. An alternative to this presentation is the <code>geom_boxplot</code>, which presents the median, first quartile, third, quartile, and outliers, but I felt the purpose here called for a simpler presentation.</p>
-</section>
-<section id="discussion" class="level1">
+</div>
+<div id="discussion" class="section level1">
 <h1>Discussion</h1>
 <p>I downloaded (by hand, one month at a time) a number of flight records from the Bureau of Transportation statistics, and narrowed the database down to flights departing from or arriving at GSP airport. With a few short data manipulation steps and the <code>ggplot2</code> data visualization package I uncovered some interesting patterns in the number of flights and delayed flights.</p>
-</section>
+</div>

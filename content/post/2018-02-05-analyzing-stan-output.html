@@ -9,17 +9,65 @@ tags:
   - Bayesian
   - flights
   - Stan
-draft: true
+draft: false
 ---
 
 
 
-<section id="purpose" class="level1">
+<div id="purpose" class="section level1">
 <h1>Purpose</h1>
 <p>The purpose of this post is to introduce you to analyzing Stan output. We started doing this in the <a href="/post/analyzing-gsp-flights-using-bayesian-analysis-with-stan">last post</a> by printing out the results of the fit object returned by the <code>stan()</code> function. <code>rstan</code> provides further functions to analyze the output, both for diagnostics and inference.</p>
 <!--more-->
-</section>
-<section id="setup-and-data" class="level1">
+</div>
+<div id="setup-and-data" class="section level1">
 <h1>Setup and data</h1>
-<p>We use the</p>
-</section>
+<p>We use the <code>mean_model_fit</code> object from before. Recall we had saved it.</p>
+<pre class="r"><code>library(rstan)
+library(bayesplot)
+load(&quot;mean_model_fit.RData&quot;)</code></pre>
+</div>
+<div id="analysis" class="section level1">
+<h1>Analysis</h1>
+<div id="trace-plots" class="section level2">
+<h2>Trace plots</h2>
+<p>Stan uses a method that is a type of Markov chain Monte Carlo (MCMC). A Markov chain is a sequence where the distribution of a random variable at a given position, say <span class="math inline">\(n\)</span>, in the sequence is conditionally independent of the random variable at position <span class="math inline">\(n-2\)</span> given that the variable at <span class="math inline">\(n-1\)</span> is observed. So, in a sense, if we want to predict the next observation in the chain, all we need is the current one, as the past won’t give us any more information. The MCMC methods have been a breakthrough in Bayesian analysis because they have made it possible to simulate from posterior distributions in even complex problems. The drawback is that assessing the convergence of these chains is complex, and diagnosing and troubleshooting lack of convergence is more difficult.</p>
+<p>With that in mind, the first graph we might look at is the traceplot. A traceplot can tell us how well the sample is exploring the space of the posterior distribution. If we have several plots from several chains (Stan does 4 by default) that seem to be noisy and overlap, that’s a good indication that the chains have converged to the posterior distribution.</p>
+<p>Let’s use the <code>bayesplot</code> package to examine the traceplot of our simple example.</p>
+<pre class="r"><code>p &lt;- mcmc_trace(as.matrix(mean_model_fit),pars=c(&quot;mu&quot;,&quot;sigma&quot;),
+                facet_args = list(nrow = 2, labeller = label_parsed))
+p</code></pre>
+<p><img src="/rmarkdown-libs/figure-html4/traceplot1-1.png" width="672" /></p>
+<p>This is only somewhat helpful. One of the issues is that we used the defaults of <code>stan</code>, which is 2000 iterations with a “warmup” or “burnin” (i.e. discarded) of 1000 iterations. Thus, we have a total of 4000 iterations in our simulation, and they are shown above as a single chain.</p>
+<p>Instead, we’d like to see the 4 chains overlaid.</p>
+<pre class="r"><code>p &lt;- mcmc_trace(as.array(mean_model_fit),pars=c(&quot;mu&quot;,&quot;sigma&quot;),
+                facet_args = list(nrow = 2, labeller = label_parsed))
+p</code></pre>
+<p><img src="/rmarkdown-libs/figure-html4/traceplot2-1.png" width="672" /></p>
+<p>This is a lot better. The difference is we use <code>as.array</code>, which keeps the structure of the 4 chains, as opposed to <code>as.matrix</code>, which basically lays all 4 chains end-to-end and returns a single matrix.</p>
+<p>There are a couple of things we used to make this plot fancier. <code>ggplot2</code> has a faceting facility that <code>mcmc_trace</code> exploits, and this <code>label_parsed</code> options turns our <code>mu</code> and <code>sigma</code> into <span class="math inline">\(\mu\)</span> and <span class="math inline">\(\sigma\)</span>. We got a little fancy.</p>
+</div>
+<div id="interpreting-the-trace-plot" class="section level2">
+<h2>Interpreting the trace plot</h2>
+<p>These trace plots are well-behaved. They basically look like random noise jumping around a relatively constant number. The chains are all on top of each other and look like they are drawn from the same distribution. We expect this from the simple model we ran. As we run more complicated models, we will explore other options of <code>mcmc_trace</code> that will help diagnose problems.</p>
+<p>When things go wrong, there are many ways the trace plot might not look like the above. It might look like a noisy sine wave (we say that the chain is not “mixing” well - and Stan’s underlying algorithm - often alleviates this issue). It might jump between two noisy states, or simply go from one to the other for a short time and then jump back. The chains might not overlap.</p>
+<p>When running more complicated models, Stan may have a problem with “divergent transitions” - we’ll cover this later and also explore some of the options of <code>mcmc_trace</code> that help diagnose this issue.</p>
+</div>
+</div>
+<div id="density-plots" class="section level1">
+<h1>Density plots</h1>
+<p>Density plots are both a good diagnostic and inferential tool. Basically, <code>bayesplot</code>’s <code>mcmc_areas</code> function is the equivalent of running <code>plot(density(x))</code> on all the parameters of a fit, with some tools to easily pretty up the graph. In this case, because we are drawing inference on all the samples and don’t need the individual chains any more, we will use <code>as.matrix</code> function rather than <code>as.array</code>.</p>
+<pre class="r"><code>p &lt;- mcmc_areas(as.matrix(mean_model_fit),pars=c(&quot;mu&quot;,&quot;sigma&quot;),prob = 0.5) +
+  ggtitle(&quot;Posterior distributions with medians and 50% intervals&quot;)
+p</code></pre>
+<p><img src="/rmarkdown-libs/figure-html4/densityplot-1.png" width="672" /></p>
+<p>The title pretty much gives the interpretation of this plot, assuming that our simple mean model is close to the actual data generating mechanism. In fact, you can interpret the 50% intervals as probability statements on <span class="math inline">\(\mu\)</span> and <span class="math inline">\(\sigma\)</span> (the way we’d like to do with the classical confidence intervals, but shouldn’t).</p>
+</div>
+<div id="shinystan" class="section level1">
+<h1>Shinystan</h1>
+<p>It’s probably useful to introduce the <code>shinystan</code> package as well. This package is best run using RStudio, because it creates an interactive webpage that depends on RStudio’s <code>shiny</code> package for interactive, R-backed web pages. The <code>shinystan</code> package, despite the name, ought to be able to work with just about any MCMC package (including WinBUGS and OpenBUGS called from R), but has functionality designed specifically for Stan. You can interactively diagnose fits with a single command.</p>
+</div>
+<div id="discussion" class="section level1">
+<h1>Discussion</h1>
+<p>We broached the topic of diagnosing Stan output through looking at diagnostic graphics. It’s always a good idea to get a visual representation of output from any MCMC simulation before proceeding to inference. The <code>shinystan</code> package, which provides interactive diagnostics, was introduced.</p>
+<p>Next time we return to making models a little more sophisticated and finding ways to exploit the patterns we saw in the flight data.</p>
+</div>

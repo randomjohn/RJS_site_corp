@@ -34,8 +34,6 @@ Once you have R, you will need to install the `rstan` package. (While you're at 
 
 And now we begin.
 
-<!--more-->
-
 # Setup and data
 
 First we load our packages.
@@ -195,7 +193,10 @@ flights <- counts_depart$n
 
 data_to_pass <- c("ndates","flights")
 mean_model_fit <- stan("flights.stan",data=data_to_pass)
+save(mean_model_fit,file="mean_model_fit.RData")
 ```
+
+This last `save` step is so we can re-use the `mean_model_fit` file later.
 
 ## Results
 

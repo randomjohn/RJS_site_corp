@@ -1,0 +1,178 @@
+---
+title: Reparameterizing models with Stan
+author: John Johnson
+date: '2018-03-12'
+slug: reparameterizing-models-with-stan
+categories:
+  - Greenville
+tags:
+  - Bayesian
+  - flights
+  - Stan
+draft: true
+---
+
+# Purpose
+
+In the previous [post](/post/2018-02-19-more-complex-models-for-analyzing-flight-data), we took advantage of the rich structure of the Greenville flight data, especially the notions that the number of flights could depend on the weekday and the season of the flights. However, when we put the two together in what seemed like a natural way, we noticed that we started getting convergence problems, and if you looked carefully at the output, you would have noticed something very strange about the weekday estimates - they were all negative! As it turns out, this model is overdetermined - there are too many parameters. Thus, there could be an infinite number of solutions to this problem. I had glossed over this idea when I added only quarters to the model, but adding both we have to face it head on. We do that here.
+
+<!--more-->
+
+# Setup and data
+
+```{r setup, message=FALSE}
+library(tidyverse)
+library(lubridate)
+library(rstan)
+library(bayesplot)
+load("airline_data.RData")
+airline_data %>% 
+  mutate(date=ymd(YEAR*10000+MONTH*100+DAY_OF_MONTH),
+         wnum = floor((date - ymd(YEAR*10000+0101))/7)) -> 
+  airline_data
+
+airline_data %>% 
+  filter(ORIGIN_AIRPORT_ID==11996) %>% 
+  count(date) -> 
+  counts_depart
+```
+
+```{r mc_cores}
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
+```
+
+# Reparameterizing
+
+Right now we have a model that looks like the following:
+
+$$flights = q_i + w_j + \epsilon \left(i\in \left\{1,2,3,4\right\}, j\in\left\{1,2,3,4,5,6,7\right\}\right)$$,
+
+where $\epsilon \sim \mathscr{N}\left(0,\sigma^2\right)$. This has an infinite number of solutions. For example, we can find a solution, then subtract 100 from all the $w_j$ and add 100 to the $q_i$ and still have a valid solution. Stan found one of them, but it started looking like there was a bit of trouble, and having all the $w_j$ be negative doesn't seem to be helpful for interpretation. Instead, let's pick a model that will have a single solution. First, let's go back to an overall mean concept. Then we will add in constraints that the sum of the quarter effects is 0, and as well the sum of the weekday effects is 0. This then should be completely determined and have a unique solution (we call this "identifiable" in the statistical modeling world). In math symbols, it looks like this:
+
+$$flights = \mu + q_i + w_j + \epsilon \left(i\in \left\{1,2,3,4\right\}, j\in\left\{1,2,3,4,5,6,7\right\},\sum_{i=1}^4q_i=0,\sum_{j=1}^7w_j=0\right)$$
+
+Let's see what this looks like in Stan:
+
+```
+data {
+  int ndates;
+  vector[ndates] flights;
+  int qtr[ndates];
+  int dow[ndates];
+}
+
+parameters {
+  real mu;
+  real<lower=0> sigma;
+  vector[3] qtr_effect_raw;
+  vector[6] dow_effect_raw;
+}
+
+transformed parameters {
+  vector[4] qtr_effect;
+  for (i in 1:3)
+    qtr_effect[i] = qtr_effect_raw[i];
+  qtr_effect[4] = -sum(qtr_effect);
+  
+  vector[7] dow_effect;
+  for (j in 1:6)
+    dow_effect[j] = dow_effect_raw[j];
+  dow_effect[7] = -sum(dow_effect);
+}
+
+model {
+  flights ~ normal(mu + qtr_effect[qtr] + dow_effect[dow],sigma);
+  sigma ~ uniform(0,20);
+  mu ~ normal(32,10);
+  for (i in 1:3)
+    qtr_effect_raw[i] ~ normal(0,10);
+  for (j in 1:6)
+    dow_effect_raw[j] ~ normal(0,10);
+}
+```
+
+Here, we use the `transformed parameters` block to enforce our idea that the sums of the quarter effects and the day of week effects are 0. If you look at what we did in that block, we basically set $q_4 = -(q_1 + q_2 + q_3)$ and similarly for $w_7$.
+
+Now, how did I come up with this bit of wizardry? Stan is supposed to be be intuitive! Well, much of it is. And the use of `transformed parameters` states very clearly what is going on. How I came up with this bit of sorcery is by reading the [Stan documentation](http://mc-stan.org/users/documentation/index.html), specifically Page 135 on identifiabilty.
+
+The lovely part of this? The R code is the same as before, with the exception that I'm changing the variable name of the fit object.
+
+```{r run_qtr_dow, message=FALSE, warning=FALSE}
+ndates <- nrow(counts_depart)
+flights <- counts_depart$n
+qtr <- quarter(counts_depart$date)
+dow <- wday(counts_depart$date)
+
+data_to_pass <- c("ndates","flights","qtr","dow")
+qtr_dow_model_reparm_fit <- stan("flights_qtr_dow_reparm.stan",data=data_to_pass)
+save(qtr_dow_model_reparm_fit,file="qtr_dow_model_reparm_fit.RData")
+qtr_dow_model_reparm_fit
+```
+
+So if you look at the messages from the compiling, you get the following:
+
+```
+DIAGNOSTIC(S) FROM PARSER:
+Warning (non-fatal):
+Left-hand side of sampling statement (~) may contain a non-linear transform of a parameter or local variable.
+If it does, you need to include a target += statement with the log absolute determinant of the Jacobian of the transform.
+Left-hand-side of sampling statement:
+    qtr_effect[i] ~ normal(...)
+```
+
+Things just got real! Stan was warning us that we would have to start doing things by hand! Fortunately, we can ignore that for now But as you start adding in fancier nonlinear transforms, you will have to start paying attention to this. We're far away from that in this series.
+
+Let's look at the convergence diagnostics. All the `Rhats` are 1, and the `n_eff`s are close to or equal to 4000. So far so good, and it looks like our reparameterization is working. Let's look at the traceplot of the quarter effects:
+
+```{r traceplot}
+p <- mcmc_trace(as.array(qtr_dow_model_reparm_fit),pars="sigma",regex_pars = "qtr_effect\\[",
+                facet_args = list(nrow = 5, labeller = label_parsed))
+p
+```
+
+Nothing looks concerning here. I leave it up to you to look at the same for the day of week effects. Let's look at the density plot of the overall effects $\mu$ and $\sigma$:
+
+```{r densityplotmusig}
+p <- mcmc_areas(as.matrix(qtr_dow_model_reparm_fit),pars=c("mu","sigma"),prob = 0.5) +
+  ggtitle("Posterior distributions with medians and 50% intervals")
+p
+```
+
+$\mu$ here close to what we had in the [mean model](/post/2018-01-15-analyzing-gsp-flights-using-bayesian-analysis-with-stan). However, $\sigma$ is about half the magnitude, indicating that we have successfully explained a large part of the variance in number of flights using the quarter and day of week. 
+
+Now let's look at the density plots of the quarter effects:
+
+```{r densityplot}
+p <- mcmc_areas(as.matrix(qtr_dow_model_reparm_fit),regex_pars = "qtr_effect\\[",prob = 0.5) +
+  ggtitle("Posterior distributions with medians and 50% intervals")
+p
+```
+
+So, we can interpret this plot as Quarter 2 as the busiest quarters, which makes sense because Quarter 2 is the season of summer vacations. Also, in the original line plot, we noticed that the airport has the most departing flights in the summer, and that comes through here. Quarter 1 is by far the slowest.
+
+There was a trick with the `regex_pars` that I used. I used `regex_pars = "qtr_effect\\["` rather than `regex_pars = "qtr_effect"` because I wanted to exclude the redundant `qtr_effect_raw` variables. They were just temporary tools that we used to get `qtr_effect` to behave the way we wanted, but we really don't want to perform inference on them. R has a few oddities in the way you use regular expressions, including the use of the double backslash `\\` in certain situations. Here I wanted to force Stan to show only those `qtr_effect` variables followed directly by the character `[` indicating an index number. The same trick applies to `dow_effect` below as well.
+
+Here are the density plots of the weekday effects.
+
+```{r densityplot2}
+p <- mcmc_areas(as.matrix(qtr_dow_model_reparm_fit),regex_pars = "dow_effect\\[",prob = 0.5) +
+  ggtitle("Posterior distributions with medians and 50% intervals")
+p
+```
+
+Recall that `wday` returns 7 on Saturdays. It turns out that Saturdays are the slowest days in terms of departing flights, followed by Sundays. Travel, at least departing from GSP, is higher during the weekdays, with the highest on Wednesdays. An airport administrator might guess this would be due to the fact that business travel occurs mostly during the week, and during the summer and holidays where vacation travel dominates (presumably), families would rather do things other than travel on Saturdays and Sundays.
+
+# Discussion
+
+We had our first run-in with model trouble last time, and we fixed it with reparameterization. Reparameterization turns out to be a very important tool in computational Bayesian analysis (i.e. using Stan, BUGS, or even your own hand-coded MCMC routine). Here we fixed a problem with identifiability, and in this simple case that fixed a problem with the algorithm.
+
+It's time to step back and take stock of what's happened so far in this series. We had a set of data that looked like it had an interesting pattern. We took the following steps with it:
+
+ 1. Plotted it
+ 1. Fit a simple model to it using some basic prior estimates from our knowledge
+ 1. Fit a more complex model because of a pattern we thought we recognized in the data
+ 1. Fit an even more complex model because of another pattern we thought we recognized in the data
+ 1. Saw some issues with that model, took a step back, and reparameterized to fix both some conceptual and computation issues
+ 
+The last two steps might repeat many times, and while that is going on it will be helpful to revisit the objectives of the analysis. We're going to iterate this adding complexity one more time because of one nagging feeling. We modeled the number of flights with a normal distribution because of convenience, but the number of flights is not a continuous variable. We would rather use something that can model count data. 

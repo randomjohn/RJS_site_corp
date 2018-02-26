@@ -121,21 +121,21 @@ save(qtr_model_fit,file=&quot;qtr_model_fit.RData&quot;)</code></pre>
 ## post-warmup draws per chain=1000, total post-warmup draws=4000.
 ## 
 ##                  mean se_mean   sd    2.5%     25%     50%     75%   97.5%
-## sigma            3.13    0.00 0.12    2.90    3.05    3.13    3.20    3.36
-## qtr_effect[1]   13.87    0.01 0.33   13.22   13.65   13.87   14.09   14.50
-## qtr_effect[2]   20.20    0.01 0.33   19.57   19.98   20.20   20.42   20.86
-## qtr_effect[3]   17.72    0.01 0.39   16.94   17.45   17.73   17.98   18.48
-## qtr_effect[4]   17.52    0.01 0.34   16.84   17.29   17.52   17.75   18.18
-## lp__          -553.95    0.03 1.57 -557.72 -554.82 -553.66 -552.75 -551.84
+## sigma            3.13    0.00 0.12    2.91    3.04    3.12    3.21    3.38
+## qtr_effect[1]   13.87    0.01 0.34   13.21   13.64   13.86   14.09   14.53
+## qtr_effect[2]   20.19    0.01 0.33   19.53   19.98   20.19   20.42   20.83
+## qtr_effect[3]   17.71    0.01 0.39   16.93   17.45   17.71   17.99   18.45
+## qtr_effect[4]   17.52    0.01 0.33   16.89   17.30   17.52   17.74   18.16
+## lp__          -553.97    0.04 1.62 -558.08 -554.76 -553.66 -552.80 -551.86
 ##               n_eff Rhat
 ## sigma          4000    1
 ## qtr_effect[1]  4000    1
 ## qtr_effect[2]  4000    1
 ## qtr_effect[3]  4000    1
 ## qtr_effect[4]  4000    1
-## lp__           2244    1
+## lp__           2047    1
 ## 
-## Samples were drawn using NUTS(diag_e) at Mon Feb 05 09:51:48 2018.
+## Samples were drawn using NUTS(diag_e) at Sun Feb 25 22:46:00 2018.
 ## For each parameter, n_eff is a crude measure of effective sample size,
 ## and Rhat is the potential scale reduction factor on split chains (at 
 ## convergence, Rhat=1).</code></pre>
@@ -191,35 +191,35 @@ qtr_dow_model_fit</code></pre>
 ## post-warmup draws per chain=1000, total post-warmup draws=4000.
 ## 
 ##                  mean se_mean   sd    2.5%     25%     50%     75%   97.5%
-## sigma            2.28    0.00 0.09    2.12    2.22    2.28    2.34    2.47
-## qtr_effect[1]   19.31    0.22 2.88   13.15   17.55   19.22   21.18   24.92
-## qtr_effect[2]   25.70    0.22 2.88   19.57   23.97   25.60   27.57   31.33
-## qtr_effect[3]   23.25    0.22 2.89   17.16   21.48   23.15   25.17   28.89
-## qtr_effect[4]   23.07    0.22 2.88   16.86   21.29   22.96   24.93   28.64
-## dow_effect[1]   -6.32    0.22 2.90  -11.97   -8.17   -6.21   -4.53   -0.13
-## dow_effect[2]   -4.61    0.22 2.89  -10.29   -6.54   -4.49   -2.84    1.58
-## dow_effect[3]   -4.57    0.22 2.88  -10.16   -6.42   -4.47   -2.79    1.53
-## dow_effect[4]   -4.03    0.22 2.90   -9.64   -5.93   -3.91   -2.26    2.15
-## dow_effect[5]   -4.09    0.22 2.89   -9.73   -5.98   -4.00   -2.35    2.06
-## dow_effect[6]   -4.36    0.22 2.89  -10.01   -6.22   -4.24   -2.61    1.79
-## dow_effect[7]  -10.41    0.22 2.89  -16.09  -12.30  -10.31   -8.65   -4.31
-## lp__          -446.24    0.08 2.47 -451.88 -447.69 -445.87 -444.45 -442.44
+## sigma            2.29    0.00 0.09    2.12    2.23    2.29    2.34    2.47
+## qtr_effect[1]   19.33    0.16 2.99   13.33   17.31   19.38   21.40   24.76
+## qtr_effect[2]   25.73    0.16 3.00   19.65   23.71   25.78   27.78   31.20
+## qtr_effect[3]   23.27    0.16 2.99   17.27   21.23   23.32   25.34   28.72
+## qtr_effect[4]   23.10    0.16 2.99   17.10   21.05   23.15   25.20   28.50
+## dow_effect[1]   -6.34    0.16 3.00  -11.81   -8.43   -6.37   -4.27   -0.32
+## dow_effect[2]   -4.63    0.16 3.00  -10.09   -6.76   -4.67   -2.56    1.33
+## dow_effect[3]   -4.59    0.16 3.00  -10.05   -6.67   -4.62   -2.53    1.42
+## dow_effect[4]   -4.05    0.16 2.99   -9.53   -6.18   -4.12   -2.03    1.96
+## dow_effect[5]   -4.12    0.16 3.01   -9.64   -6.23   -4.16   -2.09    1.89
+## dow_effect[6]   -4.38    0.16 3.00   -9.89   -6.49   -4.44   -2.30    1.56
+## dow_effect[7]  -10.44    0.16 3.00  -15.89  -12.52  -10.48   -8.37   -4.40
+## lp__          -446.35    0.07 2.45 -451.86 -447.76 -446.01 -444.56 -442.48
 ##               n_eff Rhat
-## sigma           896 1.00
-## qtr_effect[1]   171 1.02
-## qtr_effect[2]   170 1.02
-## qtr_effect[3]   171 1.02
-## qtr_effect[4]   170 1.02
-## dow_effect[1]   173 1.02
-## dow_effect[2]   171 1.02
-## dow_effect[3]   172 1.02
-## dow_effect[4]   172 1.02
-## dow_effect[5]   174 1.02
-## dow_effect[6]   173 1.02
-## dow_effect[7]   171 1.02
-## lp__            910 1.01
+## sigma           360 1.01
+## qtr_effect[1]   355 1.00
+## qtr_effect[2]   357 1.00
+## qtr_effect[3]   354 1.00
+## qtr_effect[4]   354 1.00
+## dow_effect[1]   356 1.00
+## dow_effect[2]   356 1.00
+## dow_effect[3]   357 1.00
+## dow_effect[4]   355 1.00
+## dow_effect[5]   358 1.00
+## dow_effect[6]   359 1.00
+## dow_effect[7]   355 1.00
+## lp__           1161 1.01
 ## 
-## Samples were drawn using NUTS(diag_e) at Mon Feb 05 09:51:59 2018.
+## Samples were drawn using NUTS(diag_e) at Sun Feb 25 22:46:09 2018.
 ## For each parameter, n_eff is a crude measure of effective sample size,
 ## and Rhat is the potential scale reduction factor on split chains (at 
 ## convergence, Rhat=1).</code></pre>

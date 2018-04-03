@@ -9,7 +9,7 @@ tags:
   - Bayesian
   - flights
   - Stan
-draft: true
+draft: false
 ---
 
 # Introduction
@@ -103,7 +103,7 @@ model {
 }
 ```
 
-We're almost there. We defined a vector of length 4 with our quarter effectin our `parameters` block, and we implemented an index for `qtr_effect` in the `model` block. We need to put a prior on our quarter effects, which we do with a `for` statement. For ease, we will assume the same prior on each, a normal with mean 0 and sigma of 10. The last thing we need to add is this `qtr` bit we added, which now has to map the day corresponding to the number of flights to an integer between 1 and 4 (so it can index qtr_effect). As we pass in number of flights as data, so must we pass in this mapping as data. So our final Stan code for number of flights accounting for quarter looks as follows:
+We're almost there. We defined a vector of length 4 with our quarter effect in our `parameters` block, and we implemented an index for `qtr_effect` in the `model` block. We need to put a prior on our quarter effects, which we do with a `for` statement. For ease, we will assume the same prior on each, a normal with mean 0 and sigma of 10. The last thing we need to add is this `qtr` bit we added, which now has to map the day corresponding to the number of flights to an integer between 1 and 4 (so it can index qtr_effect). As we pass in number of flights as data, so must we pass in this mapping as data. So our final Stan code for number of flights accounting for quarter looks as follows:
 
 ```
 data {

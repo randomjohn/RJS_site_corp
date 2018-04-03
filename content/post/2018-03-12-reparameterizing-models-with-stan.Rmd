@@ -9,7 +9,7 @@ tags:
   - Bayesian
   - flights
   - Stan
-draft: true
+draft: false
 ---
 
 # Purpose

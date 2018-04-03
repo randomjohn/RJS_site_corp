@@ -9,7 +9,7 @@ tags:
   - Bayesian
   - flights
   - Stan
-draft: true
+draft: false
 ---
 
 
@@ -48,7 +48,7 @@ rstan_options(auto_write = TRUE)</code></pre>
   scale_x_date(date_breaks = &quot;1 month&quot;, date_labels = &quot;%b %y&quot;) +
   ylab(&quot;Number of departing flights&quot;) +
   xlab(&quot;&quot;)</code></pre>
-<p><img src="/rmarkdown-libs/figure-html4/load_data-1.png" width="672" /></p>
+<p><img src="/post/2018-02-19-more-complex-models-for-analyzing-flight-data_files/figure-html/load_data-1.png" width="672" /></p>
 <p>The flight count data clearly don’t “wiggle around” a constant number the whole year, but rather seem to have a complicated structure. Here’s where domain knowledge can come in handy. There are two patterns: a “high-frequency” (here, weekly) and a “low-frequency” one (here, yearly). We start with the model we had before and keep adding to it.</p>
 <div id="adding-a-new-mean-for-each-quarter" class="section level2">
 <h2>Adding a new mean for each quarter</h2>
@@ -84,7 +84,7 @@ model {
   flights ~ normal(qtr_effect[qtr],sigma);
   sigma ~ uniform(0,20);
 }</code></pre>
-<p>We’re almost there. We defined a vector of length 4 with our quarter effectin our <code>parameters</code> block, and we implemented an index for <code>qtr_effect</code> in the <code>model</code> block. We need to put a prior on our quarter effects, which we do with a <code>for</code> statement. For ease, we will assume the same prior on each, a normal with mean 0 and sigma of 10. The last thing we need to add is this <code>qtr</code> bit we added, which now has to map the day corresponding to the number of flights to an integer between 1 and 4 (so it can index qtr_effect). As we pass in number of flights as data, so must we pass in this mapping as data. So our final Stan code for number of flights accounting for quarter looks as follows:</p>
+<p>We’re almost there. We defined a vector of length 4 with our quarter effect in our <code>parameters</code> block, and we implemented an index for <code>qtr_effect</code> in the <code>model</code> block. We need to put a prior on our quarter effects, which we do with a <code>for</code> statement. For ease, we will assume the same prior on each, a normal with mean 0 and sigma of 10. The last thing we need to add is this <code>qtr</code> bit we added, which now has to map the day corresponding to the number of flights to an integer between 1 and 4 (so it can index qtr_effect). As we pass in number of flights as data, so must we pass in this mapping as data. So our final Stan code for number of flights accounting for quarter looks as follows:</p>
 <pre><code>data {
   int ndates;
   vector[ndates] flights;
@@ -121,21 +121,21 @@ save(qtr_model_fit,file=&quot;qtr_model_fit.RData&quot;)</code></pre>
 ## post-warmup draws per chain=1000, total post-warmup draws=4000.
 ## 
 ##                  mean se_mean   sd    2.5%     25%     50%     75%   97.5%
-## sigma            3.13    0.00 0.12    2.91    3.04    3.12    3.21    3.38
-## qtr_effect[1]   13.87    0.01 0.34   13.21   13.64   13.86   14.09   14.53
-## qtr_effect[2]   20.19    0.01 0.33   19.53   19.98   20.19   20.42   20.83
-## qtr_effect[3]   17.71    0.01 0.39   16.93   17.45   17.71   17.99   18.45
-## qtr_effect[4]   17.52    0.01 0.33   16.89   17.30   17.52   17.74   18.16
-## lp__          -553.97    0.04 1.62 -558.08 -554.76 -553.66 -552.80 -551.86
+## sigma            3.13    0.00 0.12    2.90    3.04    3.12    3.21    3.37
+## qtr_effect[1]   13.87    0.01 0.33   13.22   13.64   13.87   14.09   14.53
+## qtr_effect[2]   20.19    0.01 0.33   19.57   19.97   20.19   20.41   20.81
+## qtr_effect[3]   17.72    0.01 0.40   16.94   17.46   17.73   17.98   18.49
+## qtr_effect[4]   17.52    0.01 0.33   16.89   17.30   17.53   17.74   18.17
+## lp__          -553.95    0.04 1.58 -557.97 -554.76 -553.63 -552.80 -551.83
 ##               n_eff Rhat
 ## sigma          4000    1
 ## qtr_effect[1]  4000    1
 ## qtr_effect[2]  4000    1
 ## qtr_effect[3]  4000    1
 ## qtr_effect[4]  4000    1
-## lp__           2047    1
+## lp__           1931    1
 ## 
-## Samples were drawn using NUTS(diag_e) at Sun Feb 25 22:46:00 2018.
+## Samples were drawn using NUTS(diag_e) at Tue Apr 03 12:41:29 2018.
 ## For each parameter, n_eff is a crude measure of effective sample size,
 ## and Rhat is the potential scale reduction factor on split chains (at 
 ## convergence, Rhat=1).</code></pre>
@@ -143,12 +143,12 @@ save(qtr_model_fit,file=&quot;qtr_model_fit.RData&quot;)</code></pre>
 <pre class="r"><code>p &lt;- mcmc_trace(as.array(qtr_model_fit),pars=&quot;sigma&quot;,regex_pars = &quot;qtr_effect&quot;,
                 facet_args = list(nrow = 5, labeller = label_parsed))
 p</code></pre>
-<p><img src="/rmarkdown-libs/figure-html4/traceplot-1.png" width="672" /></p>
+<p><img src="/post/2018-02-19-more-complex-models-for-analyzing-flight-data_files/figure-html/traceplot-1.png" width="672" /></p>
 <p>Things look pretty good, so we can proceed. We look at density plots as well, with the same bit of trickery with <code>regex_pars</code> as above:</p>
 <pre class="r"><code>p &lt;- mcmc_areas(as.matrix(qtr_model_fit),pars=&quot;sigma&quot;,regex_pars = &quot;qtr_effect&quot;,prob = 0.5) +
   ggtitle(&quot;Posterior distributions with medians and 50% intervals&quot;)
 p</code></pre>
-<p><img src="/rmarkdown-libs/figure-html4/densityplot-1.png" width="672" /></p>
+<p><img src="/post/2018-02-19-more-complex-models-for-analyzing-flight-data_files/figure-html/densityplot-1.png" width="672" /></p>
 <p>Now we can plainly see that in Quarter 2, the number of flights is much higher, averaging around 20 departures per day (perhaps due to all the summer vacations), with a pullback in Quarters 3 and 4, and with a lot less in Quarter 1.</p>
 </div>
 </div>
@@ -191,35 +191,35 @@ qtr_dow_model_fit</code></pre>
 ## post-warmup draws per chain=1000, total post-warmup draws=4000.
 ## 
 ##                  mean se_mean   sd    2.5%     25%     50%     75%   97.5%
-## sigma            2.29    0.00 0.09    2.12    2.23    2.29    2.34    2.47
-## qtr_effect[1]   19.33    0.16 2.99   13.33   17.31   19.38   21.40   24.76
-## qtr_effect[2]   25.73    0.16 3.00   19.65   23.71   25.78   27.78   31.20
-## qtr_effect[3]   23.27    0.16 2.99   17.27   21.23   23.32   25.34   28.72
-## qtr_effect[4]   23.10    0.16 2.99   17.10   21.05   23.15   25.20   28.50
-## dow_effect[1]   -6.34    0.16 3.00  -11.81   -8.43   -6.37   -4.27   -0.32
-## dow_effect[2]   -4.63    0.16 3.00  -10.09   -6.76   -4.67   -2.56    1.33
-## dow_effect[3]   -4.59    0.16 3.00  -10.05   -6.67   -4.62   -2.53    1.42
-## dow_effect[4]   -4.05    0.16 2.99   -9.53   -6.18   -4.12   -2.03    1.96
-## dow_effect[5]   -4.12    0.16 3.01   -9.64   -6.23   -4.16   -2.09    1.89
-## dow_effect[6]   -4.38    0.16 3.00   -9.89   -6.49   -4.44   -2.30    1.56
-## dow_effect[7]  -10.44    0.16 3.00  -15.89  -12.52  -10.48   -8.37   -4.40
-## lp__          -446.35    0.07 2.45 -451.86 -447.76 -446.01 -444.56 -442.48
+## sigma            2.29    0.00 0.09    2.11    2.22    2.29    2.35    2.47
+## qtr_effect[1]   19.19    0.16 3.14   13.17   16.96   19.18   21.18   25.58
+## qtr_effect[2]   25.58    0.16 3.13   19.54   23.37   25.54   27.59   32.03
+## qtr_effect[3]   23.13    0.16 3.14   17.04   20.88   23.10   25.13   29.54
+## qtr_effect[4]   22.95    0.16 3.14   16.91   20.74   22.91   24.94   29.37
+## dow_effect[1]   -6.20    0.16 3.13  -12.57   -8.25   -6.13   -4.00   -0.11
+## dow_effect[2]   -4.48    0.16 3.14  -10.99   -6.48   -4.41   -2.28    1.50
+## dow_effect[3]   -4.44    0.16 3.14  -10.90   -6.46   -4.40   -2.23    1.65
+## dow_effect[4]   -3.91    0.16 3.14  -10.31   -5.91   -3.87   -1.69    2.22
+## dow_effect[5]   -3.96    0.16 3.14  -10.47   -5.95   -3.95   -1.72    2.07
+## dow_effect[6]   -4.24    0.16 3.15  -10.75   -6.26   -4.20   -2.00    1.82
+## dow_effect[7]  -10.29    0.16 3.14  -16.77  -12.28  -10.29   -8.08   -4.23
+## lp__          -446.49    0.07 2.47 -452.19 -447.91 -446.20 -444.69 -442.64
 ##               n_eff Rhat
-## sigma           360 1.01
-## qtr_effect[1]   355 1.00
-## qtr_effect[2]   357 1.00
-## qtr_effect[3]   354 1.00
-## qtr_effect[4]   354 1.00
-## dow_effect[1]   356 1.00
-## dow_effect[2]   356 1.00
-## dow_effect[3]   357 1.00
-## dow_effect[4]   355 1.00
-## dow_effect[5]   358 1.00
-## dow_effect[6]   359 1.00
-## dow_effect[7]   355 1.00
-## lp__           1161 1.01
+## sigma          1089 1.00
+## qtr_effect[1]   380 1.01
+## qtr_effect[2]   376 1.01
+## qtr_effect[3]   377 1.01
+## qtr_effect[4]   375 1.01
+## dow_effect[1]   377 1.01
+## dow_effect[2]   380 1.01
+## dow_effect[3]   378 1.01
+## dow_effect[4]   380 1.01
+## dow_effect[5]   377 1.01
+## dow_effect[6]   378 1.01
+## dow_effect[7]   377 1.01
+## lp__           1363 1.00
 ## 
-## Samples were drawn using NUTS(diag_e) at Sun Feb 25 22:46:09 2018.
+## Samples were drawn using NUTS(diag_e) at Tue Apr 03 12:41:41 2018.
 ## For each parameter, n_eff is a crude measure of effective sample size,
 ## and Rhat is the potential scale reduction factor on split chains (at 
 ## convergence, Rhat=1).</code></pre>

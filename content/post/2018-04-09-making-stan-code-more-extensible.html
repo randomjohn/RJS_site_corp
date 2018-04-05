@@ -1,0 +1,22 @@
+---
+title: "Cleaning up - using model matrices to make Stan code more extensible"
+author: "John Johnson"
+date: '2018-04-09'
+slug: making-stan-code-more-extensible
+categories:
+  - Greenville
+tags:
+  - Bayesian
+  - flights
+  - Stan
+draft: true
+---
+
+
+
+<pre class="r"><code>options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)</code></pre>
+<div id="purpose" class="section level1">
+<h1>Purpose</h1>
+<p>In the last post we presented something that’s pretty close to the final model for our GSP flight departure data: a negative binomial generalized linear model depending with quarter and day of week as covariates. However, as we added variables, we had to add lines to the Stan code and it felt a bit clunky. For instance, we had to add vectors for each of the quarter and day of week. To make matters worse, we hard-coded the number of quarters and days of week. While we don’t expect the number of quarters in a year to ever change, wouldn’t it be nice to write the Stan code (which has to be compiled every time it changes) in such a way that you don’t have to add vectors when you add covariates? Fortunately, Stan understands matrix algebra, and what’s more can dynamically allocate matrices. This, combined with the <code>model.matrix</code> command in R and the fact that you can pass in the number of rows and columns of this model matrix, means you can write code that can incorporate any number of variables and observations (within limits of memory and speed). Having only one Stan program to incorporate everything means that you can have very tight modeling iterations so that you can quickly determine the effect of adding or taking away variables.</p>
+</div>

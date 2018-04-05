@@ -14,7 +14,7 @@ draft: false
 
 # Purpose
 
-The purpose of this post is to introduce you to analyzing Stan output. We started doing this in the [last post](/post/analyzing-gsp-flights-using-bayesian-analysis-with-stan) by printing out the results of the fit object returned by the `stan()` function. `rstan` provides further functions to analyze the output, both for diagnostics and inference.
+The purpose of this post is to introduce you to analyzing Stan output. We started doing this in the [last post](/post/analyzing-gsp-flights-using-bayesian-analysis-with-stan) by printing out the results of the fit object returned by the `stan()` function. `rstan` provides further functions to analyze the output, both for diagnostics and inference. 
 
 <!--more-->
 

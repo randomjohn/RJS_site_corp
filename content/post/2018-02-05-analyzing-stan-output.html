@@ -36,13 +36,13 @@ load(&quot;mean_model_fit.RData&quot;)</code></pre>
 <pre class="r"><code>p &lt;- mcmc_trace(as.matrix(mean_model_fit),pars=c(&quot;mu&quot;,&quot;sigma&quot;),
                 facet_args = list(nrow = 2, labeller = label_parsed))
 p</code></pre>
-<p><img src="/rmarkdown-libs/figure-html4/traceplot1-1.png" width="672" /></p>
+<p><img src="/post/2018-02-05-analyzing-stan-output_files/figure-html/traceplot1-1.png" width="672" /></p>
 <p>This is only somewhat helpful. One of the issues is that we used the defaults of <code>stan</code>, which is 2000 iterations with a “warmup” or “burnin” (i.e. discarded) of 1000 iterations. Thus, we have a total of 4000 iterations in our simulation, and they are shown above as a single chain.</p>
 <p>Instead, we’d like to see the 4 chains overlaid.</p>
 <pre class="r"><code>p &lt;- mcmc_trace(as.array(mean_model_fit),pars=c(&quot;mu&quot;,&quot;sigma&quot;),
                 facet_args = list(nrow = 2, labeller = label_parsed))
 p</code></pre>
-<p><img src="/rmarkdown-libs/figure-html4/traceplot2-1.png" width="672" /></p>
+<p><img src="/post/2018-02-05-analyzing-stan-output_files/figure-html/traceplot2-1.png" width="672" /></p>
 <p>This is a lot better. The difference is we use <code>as.array</code>, which keeps the structure of the 4 chains, as opposed to <code>as.matrix</code>, which basically lays all 4 chains end-to-end and returns a single matrix.</p>
 <p>There are a couple of things we used to make this plot fancier. <code>ggplot2</code> has a faceting facility that <code>mcmc_trace</code> exploits, and this <code>label_parsed</code> options turns our <code>mu</code> and <code>sigma</code> into <span class="math inline">\(\mu\)</span> and <span class="math inline">\(\sigma\)</span>. We got a little fancy.</p>
 </div>
@@ -59,7 +59,7 @@ p</code></pre>
 <pre class="r"><code>p &lt;- mcmc_areas(as.matrix(mean_model_fit),pars=c(&quot;mu&quot;,&quot;sigma&quot;),prob = 0.5) +
   ggtitle(&quot;Posterior distributions with medians and 50% intervals&quot;)
 p</code></pre>
-<p><img src="/rmarkdown-libs/figure-html4/densityplot-1.png" width="672" /></p>
+<p><img src="/post/2018-02-05-analyzing-stan-output_files/figure-html/densityplot-1.png" width="672" /></p>
 <p>The title pretty much gives the interpretation of this plot, assuming that our simple mean model is close to the actual data generating mechanism. In fact, you can interpret the 50% intervals as probability statements on <span class="math inline">\(\mu\)</span> and <span class="math inline">\(\sigma\)</span> (the way we’d like to do with the classical confidence intervals, but shouldn’t).</p>
 </div>
 <div id="shinystan" class="section level1">

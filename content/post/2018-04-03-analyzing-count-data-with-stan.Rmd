@@ -9,7 +9,7 @@ tags:
   - Bayesian
   - flights
   - Stan
-draft: true
+draft: false
 ---
 
 ```{r setup, include=FALSE}
@@ -28,12 +28,12 @@ airline_data %>%
   filter(ORIGIN_AIRPORT_ID==11996) %>% 
   count(date) -> 
   counts_depart
-```
 
-```{r mc_cores}
 options(mc.cores = parallel::detectCores())
 rstan_options(auto_write = TRUE)
 ```
+
+
 
 # Purpose
 
@@ -49,12 +49,75 @@ Right now, if you are curious about the math, we have a model that looks like th
 
 $$flights = \mu + q_i + w_j + \epsilon \left(i\in \left\{1,2,3,4\right\}, j\in\left\{1,2,3,4,5,6,7\right\},\sum_{i=1}^4q_i=0,\sum_{j=1}^7w_j=0\right)$$
 
-This part of the model doesn't change. What changes is that the noise $\epsilon$ changes distribution. 
+This part of the model doesn't change. What changes is that the noise $\epsilon$ changes distribution. In terms of the model statement, we just change the distribution of the flight data itself. Going through the [Stan documentation](http://mc-stan.org/users/documentation/index.html), we find the `neg_binomial_2` function, which is very convenient because its parameters are in terms of mean and overdispersion. We change the name of `sigma` to `phi` to avoid confusion - `phi` is an overdispersion parameter that, while it plays into the variance of the flights residuals, it is not equal to it as in the previous models. There is a further subtlety, where we have to pass in the number of flights as an array of integers rather than a vector. 
 
-<!--START HERE-->
+The full model code is
+
+```
+data {
+  int ndates;
+  int flights[ndates]; // changed to array of integers
+  int qtr[ndates];
+  int dow[ndates];
+}
+
+parameters {
+  real mu;
+  real<lower=0> phi; // no longer sigma - phi is overdispersion
+  vector[3] qtr_effect_raw;
+  vector[6] dow_effect_raw;
+}
+
+transformed parameters {
+  vector[4] qtr_effect;
+  vector[7] dow_effect;
+
+  for (i in 1:3)
+    qtr_effect[i] = qtr_effect_raw[i];
+  qtr_effect[4] = -sum(qtr_effect_raw);
+  for (i in 1:6)
+    dow_effect[i] = dow_effect_raw[i];
+  dow_effect[7] = -sum(dow_effect_raw);
+}
+
+model {
+  flights ~ neg_binomial_2_log(mu + qtr_effect[qtr] + dow_effect[dow],phi); // changed distribution
+  phi ~ uniform(0,50000); // phi is no longer a variance but an overdispersion
+  mu ~ normal(3.45,2);
+  for (i in 1:3)
+    qtr_effect[i] ~ normal(0,2);
+  for (i in 1:6)
+    dow_effect[i] ~ normal(0,2);
+}
+
+```
+
+And, like before, the R code is very similar:
+
+```{r run_qtr_dow_nb, message=FALSE, warning=FALSE}
+ndates <- nrow(counts_depart)
+flights <- counts_depart$n
+qtr <- quarter(counts_depart$date)
+dow <- wday(counts_depart$date)
+
+data_to_pass <- c("ndates","flights","qtr","dow")
+qtr_dow_model_nb_fit <- stan("flights_qtr_dow_nb.stan",data=data_to_pass)
+save(qtr_dow_model_nb_fit,file="qtr_dow_model_nb_fit.RData")
+qtr_dow_model_nb_fit
+```
+
+This is the place where we really have to start going beyond introductory discussions. We made some interesting choices in this model out of mathematical convenience. For one thing, we modeled the log of flight counts rather than flight counts directly. This is because in this model flight counts have to be positive. It's worth trying to model the flight counts directly, and I encourage you to try. You'll need to replace `neg_binomial_2_log` above with `neg_binomial_2`. Try tweaking `phi`, `mu`, and the effect priors as well when you do this. For instance, I decided to put a Normal(3.45,2) prior on `mu` (note that `exp(3.45) = 31.5`, close to the prior I had on the regular scale in previous posts).
+
+It's not hard to see that this model agrees in some ways with what previous models revealed - very low flights in Q1, major dropoff in flights on Saturday. Our posterior mean number of flights is `exp(2.83)` $\approx$ `17`, with a very low standard error.
+
+There are three major concerns:
+
+ 1. There are several parameters with an Rhat > 1, and
+ 2. The `phi` parameter is very large, with a high standard error. This indicates a very large overdispersion relative to a Poisson model.
+ 3. Some runs of this model will give a number of divergent transitions, which indicates the sampling has gone awry.
 
 # Discussion
 
 We changed our model slightly to account for the fact that flights are counts rather than continuous. In effect, we have built up from a very simple model that you might encounter in a Statistics 101 class to a rather sophisticated generalized linear model that you might encounter after a couple of years in statistics. Because we built this up in Stan, we used computer code that resembles the math and got results that are straightforward to interpret.
 
-This is probably the right point to mention the `rstanarm` package, which implements a lot of common statistical models including the generalized linear models. Especially if you are starting out with using Stan and need to use it for some modeling right now, you probably want to look into it. The main reason is that `rstanarm` uses a few tricks and reparameterizations to make the Markov chain Monte Carlo sampling more efficient and less risky. In addition, you won't have to code the Stan model yourself, and yet you get the benefit of the Bayesian analysis.
+This is probably the right point to mention the `rstanarm` package, which implements a lot of common statistical models including the generalized linear models (like the negative binomial regression fit above). Especially if you are starting out with using Stan and need to use it for some modeling right now, you probably want to look into it. The main reason is that `rstanarm` uses a few tricks and reparameterizations to make the Markov chain Monte Carlo sampling more efficient and less risky. In addition, you won't have to code the Stan model yourself, and yet you get the benefit of the Bayesian analysis.

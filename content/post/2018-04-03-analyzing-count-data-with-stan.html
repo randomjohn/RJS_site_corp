@@ -9,13 +9,11 @@ tags:
   - Bayesian
   - flights
   - Stan
-draft: true
+draft: false
 ---
 
 
 
-<pre class="r"><code>options(mc.cores = parallel::detectCores())
-rstan_options(auto_write = TRUE)</code></pre>
 <div id="purpose" class="section level1">
 <h1>Purpose</h1>
 <p>In the last few posts, we have built a rather sophisticated linear model using Stan. This model investigates the patterns in flight departure data over the course of a year. We started with a very simple model - that the flights could be modeled by a single number plus some noise. Over time, we have built up to a model that involves a single number (“overall mean” if you will), a day of the week effect, and a quarter effect. We chose day of the week because we reviewed a line graph of the data, and we took some cues from our domain knowledge (i.e. that the demand for flights depends roughly on quarter and on day of the week).</p>
@@ -26,11 +24,122 @@ rstan_options(auto_write = TRUE)</code></pre>
 <h1>Modeling counts</h1>
 <p>Right now, if you are curious about the math, we have a model that looks like the following:</p>
 <p><span class="math display">\[flights = \mu + q_i + w_j + \epsilon \left(i\in \left\{1,2,3,4\right\}, j\in\left\{1,2,3,4,5,6,7\right\},\sum_{i=1}^4q_i=0,\sum_{j=1}^7w_j=0\right)\]</span></p>
-<p>This part of the model doesn’t change. What changes is that the noise <span class="math inline">\(\epsilon\)</span> changes distribution.</p>
-<!--START HERE-->
+<p>This part of the model doesn’t change. What changes is that the noise <span class="math inline">\(\epsilon\)</span> changes distribution. In terms of the model statement, we just change the distribution of the flight data itself. Going through the <a href="http://mc-stan.org/users/documentation/index.html">Stan documentation</a>, we find the <code>neg_binomial_2</code> function, which is very convenient because its parameters are in terms of mean and overdispersion. We change the name of <code>sigma</code> to <code>phi</code> to avoid confusion - <code>phi</code> is an overdispersion parameter that, while it plays into the variance of the flights residuals, it is not equal to it as in the previous models. There is a further subtlety, where we have to pass in the number of flights as an array of integers rather than a vector.</p>
+<p>The full model code is</p>
+<pre><code>data {
+  int ndates;
+  int flights[ndates]; // changed to array of integers
+  int qtr[ndates];
+  int dow[ndates];
+}
+
+parameters {
+  real mu;
+  real&lt;lower=0&gt; phi; // no longer sigma - phi is overdispersion
+  vector[3] qtr_effect_raw;
+  vector[6] dow_effect_raw;
+}
+
+transformed parameters {
+  vector[4] qtr_effect;
+  vector[7] dow_effect;
+
+  for (i in 1:3)
+    qtr_effect[i] = qtr_effect_raw[i];
+  qtr_effect[4] = -sum(qtr_effect_raw);
+  for (i in 1:6)
+    dow_effect[i] = dow_effect_raw[i];
+  dow_effect[7] = -sum(dow_effect_raw);
+}
+
+model {
+  flights ~ neg_binomial_2_log(mu + qtr_effect[qtr] + dow_effect[dow],phi); // changed distribution
+  phi ~ uniform(0,50000); // phi is no longer a variance but an overdispersion
+  mu ~ normal(3.45,2);
+  for (i in 1:3)
+    qtr_effect[i] ~ normal(0,2);
+  for (i in 1:6)
+    dow_effect[i] ~ normal(0,2);
+}
+</code></pre>
+<p>And, like before, the R code is very similar:</p>
+<pre class="r"><code>ndates &lt;- nrow(counts_depart)
+flights &lt;- counts_depart$n
+qtr &lt;- quarter(counts_depart$date)
+dow &lt;- wday(counts_depart$date)
+
+data_to_pass &lt;- c(&quot;ndates&quot;,&quot;flights&quot;,&quot;qtr&quot;,&quot;dow&quot;)
+qtr_dow_model_nb_fit &lt;- stan(&quot;flights_qtr_dow_nb.stan&quot;,data=data_to_pass)
+save(qtr_dow_model_nb_fit,file=&quot;qtr_dow_model_nb_fit.RData&quot;)
+qtr_dow_model_nb_fit</code></pre>
+<pre><code>## Inference for Stan model: flights_qtr_dow_nb.
+## 4 chains, each with iter=2000; warmup=1000; thin=1; 
+## post-warmup draws per chain=1000, total post-warmup draws=4000.
+## 
+##                       mean se_mean       sd     2.5%      25%      50%
+## mu                    2.83    0.00     0.01     2.81     2.83     2.83
+## phi               27124.77  661.70 13502.42  3840.05 15555.78 27218.20
+## qtr_effect_raw[1]    -0.22    0.00     0.02    -0.27    -0.23    -0.22
+## qtr_effect_raw[2]     0.16    0.00     0.02     0.12     0.15     0.16
+## qtr_effect_raw[3]     0.03    0.00     0.03    -0.02     0.01     0.03
+## dow_effect_raw[1]    -0.04    0.00     0.03    -0.10    -0.06    -0.04
+## dow_effect_raw[2]     0.06    0.00     0.03     0.00     0.04     0.06
+## dow_effect_raw[3]     0.06    0.00     0.03     0.00     0.04     0.06
+## dow_effect_raw[4]     0.09    0.00     0.03     0.03     0.07     0.09
+## dow_effect_raw[5]     0.09    0.00     0.03     0.03     0.07     0.09
+## dow_effect_raw[6]     0.07    0.00     0.03     0.01     0.05     0.07
+## qtr_effect[1]        -0.22    0.00     0.02    -0.27    -0.23    -0.22
+## qtr_effect[2]         0.16    0.00     0.02     0.12     0.15     0.16
+## qtr_effect[3]         0.03    0.00     0.03    -0.02     0.01     0.03
+## qtr_effect[4]         0.02    0.00     0.02    -0.02     0.01     0.02
+## dow_effect[1]        -0.04    0.00     0.03    -0.10    -0.06    -0.04
+## dow_effect[2]         0.06    0.00     0.03     0.00     0.04     0.06
+## dow_effect[3]         0.06    0.00     0.03     0.00     0.04     0.06
+## dow_effect[4]         0.09    0.00     0.03     0.03     0.07     0.09
+## dow_effect[5]         0.09    0.00     0.03     0.03     0.07     0.09
+## dow_effect[6]         0.07    0.00     0.03     0.01     0.05     0.07
+## dow_effect[7]        -0.32    0.00     0.04    -0.40    -0.35    -0.32
+## lp__              10851.25    0.09     2.36 10845.70 10849.91 10851.57
+##                        75%    97.5% n_eff Rhat
+## mu                    2.84     2.86   697 1.00
+## phi               38738.00 48756.33   416 1.00
+## qtr_effect_raw[1]    -0.20    -0.17   528 1.01
+## qtr_effect_raw[2]     0.18     0.21   430 1.01
+## qtr_effect_raw[3]     0.05     0.08   621 1.00
+## dow_effect_raw[1]    -0.02     0.02   632 1.00
+## dow_effect_raw[2]     0.08     0.12   557 1.01
+## dow_effect_raw[3]     0.08     0.12   609 1.01
+## dow_effect_raw[4]     0.11     0.15   639 1.01
+## dow_effect_raw[5]     0.11     0.15   587 1.00
+## dow_effect_raw[6]     0.09     0.13   719 1.01
+## qtr_effect[1]        -0.20    -0.17   528 1.01
+## qtr_effect[2]         0.18     0.21   430 1.01
+## qtr_effect[3]         0.05     0.08   621 1.00
+## qtr_effect[4]         0.04     0.07  1464 1.00
+## dow_effect[1]        -0.02     0.02   632 1.00
+## dow_effect[2]         0.08     0.12   557 1.01
+## dow_effect[3]         0.08     0.12   609 1.01
+## dow_effect[4]         0.11     0.15   639 1.01
+## dow_effect[5]         0.11     0.15   587 1.00
+## dow_effect[6]         0.09     0.13   719 1.01
+## dow_effect[7]        -0.30    -0.25  1590 1.00
+## lp__              10853.00 10854.90   733 1.00
+## 
+## Samples were drawn using NUTS(diag_e) at Tue May 01 22:54:43 2018.
+## For each parameter, n_eff is a crude measure of effective sample size,
+## and Rhat is the potential scale reduction factor on split chains (at 
+## convergence, Rhat=1).</code></pre>
+<p>This is the place where we really have to start going beyond introductory discussions. We made some interesting choices in this model out of mathematical convenience. For one thing, we modeled the log of flight counts rather than flight counts directly. This is because in this model flight counts have to be positive. It’s worth trying to model the flight counts directly, and I encourage you to try. You’ll need to replace <code>neg_binomial_2_log</code> above with <code>neg_binomial_2</code>. Try tweaking <code>phi</code>, <code>mu</code>, and the effect priors as well when you do this. For instance, I decided to put a Normal(3.45,2) prior on <code>mu</code> (note that <code>exp(3.45) = 31.5</code>, close to the prior I had on the regular scale in previous posts).</p>
+<p>It’s not hard to see that this model agrees in some ways with what previous models revealed - very low flights in Q1, major dropoff in flights on Saturday. Our posterior mean number of flights is <code>exp(2.83)</code> <span class="math inline">\(\approx\)</span> <code>17</code>, with a very low standard error.</p>
+<p>There are three major concerns:</p>
+<ol style="list-style-type: decimal">
+<li>There are several parameters with an Rhat &gt; 1, and</li>
+<li>The <code>phi</code> parameter is very large, with a high standard error. This indicates a very large overdispersion relative to a Poisson model.</li>
+<li>Some runs of this model will give a number of divergent transitions, which indicates the sampling has gone awry.</li>
+</ol>
 </div>
 <div id="discussion" class="section level1">
 <h1>Discussion</h1>
 <p>We changed our model slightly to account for the fact that flights are counts rather than continuous. In effect, we have built up from a very simple model that you might encounter in a Statistics 101 class to a rather sophisticated generalized linear model that you might encounter after a couple of years in statistics. Because we built this up in Stan, we used computer code that resembles the math and got results that are straightforward to interpret.</p>
-<p>This is probably the right point to mention the <code>rstanarm</code> package, which implements a lot of common statistical models including the generalized linear models. Especially if you are starting out with using Stan and need to use it for some modeling right now, you probably want to look into it. The main reason is that <code>rstanarm</code> uses a few tricks and reparameterizations to make the Markov chain Monte Carlo sampling more efficient and less risky. In addition, you won’t have to code the Stan model yourself, and yet you get the benefit of the Bayesian analysis.</p>
+<p>This is probably the right point to mention the <code>rstanarm</code> package, which implements a lot of common statistical models including the generalized linear models (like the negative binomial regression fit above). Especially if you are starting out with using Stan and need to use it for some modeling right now, you probably want to look into it. The main reason is that <code>rstanarm</code> uses a few tricks and reparameterizations to make the Markov chain Monte Carlo sampling more efficient and less risky. In addition, you won’t have to code the Stan model yourself, and yet you get the benefit of the Bayesian analysis.</p>
 </div>

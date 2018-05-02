@@ -66,7 +66,7 @@ counts_depart %&gt;%
   scale_x_date(date_breaks = &quot;1 month&quot;, date_labels = &quot;%b %y&quot;) +
   ylab(&quot;Number of departing flights&quot;) +
   xlab(&quot;&quot;)</code></pre>
-<p><img src="/rmarkdown-libs/figure-html4/load_data-1.png" width="672" /></p>
+<p><img src="/post/2018-01-10-analyzing-gsp-flights-using-bayesian-analysis-with-stan_files/figure-html/load_data-1.png" width="672" /></p>
 <p>This code, <a href="/post/2017-09-24-flights-from-gsp/">as before</a>, loads the airline data and converts the rather strange date format to a date format that R can use. (See the linked post for more details – I more or less copied the first part of the code.) I then display the counts again just to show what we’re working with. (Again, to obtain the original csv data, refer to the linked post.)</p>
 </div>
 <div id="simple-model-of-how-many-flights-per-day" class="section level1">
@@ -160,15 +160,15 @@ save(mean_model_fit,file=&quot;mean_model_fit.RData&quot;)</code></pre>
 ## post-warmup draws per chain=1000, total post-warmup draws=4000.
 ## 
 ##          mean se_mean   sd    2.5%     25%     50%     75%   97.5% n_eff
-## mu      17.33    0.00 0.21   16.92   17.19   17.33   17.48   17.74  3518
-## sigma    3.91    0.00 0.15    3.63    3.81    3.91    4.01    4.22  3147
-## lp__  -623.12    0.02 0.96 -625.67 -623.50 -622.82 -622.43 -622.17  1896
+## mu      17.32    0.00 0.22   16.91   17.18   17.32   17.47   17.74  3081
+## sigma    3.91    0.00 0.16    3.61    3.80    3.90    4.01    4.24  3007
+## lp__  -623.21    0.03 1.09 -626.17 -623.61 -622.87 -622.44 -622.17  1629
 ##       Rhat
 ## mu       1
 ## sigma    1
 ## lp__     1
 ## 
-## Samples were drawn using NUTS(diag_e) at Sun Feb 25 22:45:38 2018.
+## Samples were drawn using NUTS(diag_e) at Tue May 01 22:52:05 2018.
 ## For each parameter, n_eff is a crude measure of effective sample size,
 ## and Rhat is the potential scale reduction factor on split chains (at 
 ## convergence, Rhat=1).</code></pre>

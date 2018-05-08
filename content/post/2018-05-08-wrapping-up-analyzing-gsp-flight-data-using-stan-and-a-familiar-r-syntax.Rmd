@@ -1,0 +1,73 @@
+---
+title: 'Wrapping up: analyzing GSP flight data using Stan and a familiar R syntax'
+author: John Johnson
+date: '2018-05-08'
+categories:
+  - Greenville
+tags:
+  - Bayesian
+  - flights
+  - Stan
+slug: wrapping-up-analyzing-gsp-flight-data-using-stan-and-a-familiar-r-syntax
+draft: true
+---
+
+# Purpose
+
+In previous posts we started with a public dataset of departures from my local airport, Greenville-Spartanburg International Airport (GSP) and built up a model using the [Stan](http://mc-stan.org) package. This model started out easy enough - a constant plus some random noise, but pretty soon we were able to build up a pretty sophisticated model that took advantage of a number of structural features in the data. The dark side of this approach is that pretty soon we bump into issues affecting numerical computation. In the first case, we were able to solve the issue by reparameterizing into a form that ended up being more natural for the problem anyway. In the second case, which we didn't really cover a lot, came from the fact that we were using what was really a generalized linear model (i.e. we were modeling negative binomial count data). Sometimes you really have to mess around with the options. Fortunately for a very large class of models, someone has messed around with the options (and other tricks) for us and presented in a package that uses the formula syntax for R users. Here we repeat the negative binomial model using the `rstanarm` package.
+
+<!--more-->
+
+# Setup and data
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(rstan)
+library(bayesplot)
+load("airline_data.RData")
+airline_data %>% 
+  mutate(date=ymd(YEAR*10000+MONTH*100+DAY_OF_MONTH),
+         wnum = floor((date - ymd(YEAR*10000+0101))/7)) -> 
+  airline_data
+
+airline_data %>% 
+  filter(ORIGIN_AIRPORT_ID==11996) %>% 
+  count(date) -> 
+  counts_depart
+
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
+```
+
+We preload the data as before, and this time include a new R package:
+
+```{r message=FALSE}
+library(rstanarm)
+```
+
+With `rstanarm` we don't really need to create a separate `.stan` file; we can just analyze using R code. The work with Stan occurs in the background:
+
+```{r}
+fit <- stan_glm.nb(n ~ factor(quarter(date)) + factor(wday(date)), data=counts_depart,prior=normal(0,5),prior_intercept=normal(log(32),5))
+fit
+```
+
+That is a lot of data manipulation and analysis fit onto one line! Here, instead of explicitly calculating the quarter and the weekday, we included it in the formula part of the `stan_glm.nb` line. The minor drawback is that the presentation of it looks a little funny, and we lost a little control over the reference class. Also notice this is on the log scale, as the parameters were in the last post. However, we can still review the relative effect sizes.
+
+Now we can plot the results:
+
+```{r}
+plot(fit,regex_pars="date")
+```
+
+The `regex_pars` option in the above prevented the plotting of the `Intercept` and `reciprocal_dispersion`, which would have thrown off the scaling of the above graph. (The large value of the `reciprocal_dispersion` relative to the square of the intercept means the residual departure from a Poisson count model isn't too bad; in fact, we might have gotten reasonable results from a Poisson model.)
+
+These results are similar to the ones we observed before - high number of departures in Q2, low in Q1, highest number of departures on Wednesdays and fewest on Sundays. Helpfully, the output gives the mean posterior predictive distribution of the number of departures of about 17 (a far cry from the 32 we guessed way back when, and more in line with results from other methods). As it turns out, we got these insights with an "incorrect" model (one that modeled number of flights as continuous), and the trouble we went through to model these counts correctly gave the same insights.
+
+# Discussion
+
+There's a lot that can be done with these Stan models that I glossed over brevity: traceplots, diagnostics, etc. And there's also that nagging question of "why not just start with `rstanarm` anyway?" While linear and generalized linear models can shed insight on a lot of things we observe in the world, sometimes it's better to go through the trouble of building these things up structurally. Sometimes science will suggest an informative prior or a particular relationship between observed phenomena. Stan enables us to model those directly (ok, well, I haven't modeled any of the crazy relationships in quantum mechanics). But if it turns out a linear or generalized linear model (or linear/generalized linear mixed model, such as repeated measures or hierarchical linear model) is the route to take, and you need to use a Bayesian method (which I almost always prefer), `rstanarm` is very useful because it cuts down on data manipulation, uses a familiar R formula syntax, and hides a lot of the nasty numerical details (like reparameterizing to avoid divergent transitions in the underlying algorithm) so you can focus on the problem at hand.
+
+This also ends my first series on Stan. There is a small, but growing number of blog posts, books, and other discussions on this excellent piece of software, and the user manual and other documentation at the website is excellent as well. There are a couple of not so introductory examples I'm considering for the next series, or I might go into prediction as I consider machine learning vs. Bayesian learning. I'm not sure yet.

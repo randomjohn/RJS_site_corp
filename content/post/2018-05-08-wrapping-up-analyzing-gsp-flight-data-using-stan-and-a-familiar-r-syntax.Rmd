@@ -43,7 +43,7 @@ rstan_options(auto_write = TRUE)
 
 We preload the data as before, and this time include a new R package:
 
-```{r message=FALSE}
+```{r message=FALSE, warning=FALSE}
 library(rstanarm)
 ```
 
@@ -54,7 +54,10 @@ fit <- stan_glm.nb(n ~ factor(quarter(date)) + factor(wday(date)), data=counts_d
 fit
 ```
 
-That is a lot of data manipulation and analysis fit onto one line! Here, instead of explicitly calculating the quarter and the weekday, we included it in the formula part of the `stan_glm.nb` line. The minor drawback is that the presentation of it looks a little funny, and we lost a little control over the reference class. Also notice this is on the log scale, as the parameters were in the last post. However, we can still review the relative effect sizes.
+That is a lot of data manipulation and analysis fit onto one line! Here, instead of explicitly calculating the quarter and the weekday, we included it in the formula part of the `stan_glm.nb` line. The minor drawback is that the presentation of it looks a little funny, and we lost a little control over the reference class. Also notice this is on the log scale, as the parameters were in the last post. However, we can still review the relative effect sizes. We also specified priors as follows:
+
+ * Intercept prior: distribution with mean equal to our original guess (32, on the log scale) and a standard deviation high enough to cover all reasonable values (again, on the log scale)
+ * Priors for others: conservative, centered at no effect but with high enough standard deviation to cover all reasonable values
 
 Now we can plot the results:
 
@@ -64,10 +67,10 @@ plot(fit,regex_pars="date")
 
 The `regex_pars` option in the above prevented the plotting of the `Intercept` and `reciprocal_dispersion`, which would have thrown off the scaling of the above graph. (The large value of the `reciprocal_dispersion` relative to the square of the intercept means the residual departure from a Poisson count model isn't too bad; in fact, we might have gotten reasonable results from a Poisson model.)
 
-These results are similar to the ones we observed before - high number of departures in Q2, low in Q1, highest number of departures on Wednesdays and fewest on Sundays. Helpfully, the output gives the mean posterior predictive distribution of the number of departures of about 17 (a far cry from the 32 we guessed way back when, and more in line with results from other methods). As it turns out, we got these insights with an "incorrect" model (one that modeled number of flights as continuous), and the trouble we went through to model these counts correctly gave the same insights.
+These results are similar to the ones we observed before - high number of departures in Q2, low in Q1, highest number of departures on Wednesdays (perhaps) and fewest on Sundays. Helpfully, the output gives the mean posterior predictive distribution of the number of departures of about 17 (a far cry from the 32 we guessed way back when, and more in line with results from other methods). As it turns out, we got these insights with an "incorrect" model (one that modeled number of flights as continuous), and the trouble we went through to model these counts correctly gave the same insights.
 
 # Discussion
 
-There's a lot that can be done with these Stan models that I glossed over brevity: traceplots, diagnostics, etc. And there's also that nagging question of "why not just start with `rstanarm` anyway?" While linear and generalized linear models can shed insight on a lot of things we observe in the world, sometimes it's better to go through the trouble of building these things up structurally. Sometimes science will suggest an informative prior or a particular relationship between observed phenomena. Stan enables us to model those directly (ok, well, I haven't modeled any of the crazy relationships in quantum mechanics). But if it turns out a linear or generalized linear model (or linear/generalized linear mixed model, such as repeated measures or hierarchical linear model) is the route to take, and you need to use a Bayesian method (which I almost always prefer), `rstanarm` is very useful because it cuts down on data manipulation, uses a familiar R formula syntax, and hides a lot of the nasty numerical details (like reparameterizing to avoid divergent transitions in the underlying algorithm) so you can focus on the problem at hand.
+There's a lot that can be done with these Stan models that I glossed over for sake of brevity: traceplots, diagnostics, predictive probabilities, etc. And there's also that nagging question of "why not just start with `rstanarm` anyway?" While linear and generalized linear models can shed insight on a lot of things we observe in the world, sometimes it's better to go through the trouble of building these things up structurally. Sometimes science will suggest an informative prior or a particular relationship between observed phenomena. Stan enables us to model those directly (ok, well, I haven't modeled any of the crazy relationships in quantum mechanics). But if it turns out a linear or generalized linear model (or linear/generalized linear mixed model, such as repeated measures or hierarchical linear model) is the route to take, and you need to use a Bayesian method (which I almost always prefer), `rstanarm` is very useful because it cuts down on data manipulation, uses a familiar R formula syntax, and hides a lot of the nasty numerical details (like reparameterizing to avoid divergent transitions in the underlying algorithm) so you can focus on the problem at hand.
 
 This also ends my first series on Stan. There is a small, but growing number of blog posts, books, and other discussions on this excellent piece of software, and the user manual and other documentation at the website is excellent as well. There are a couple of not so introductory examples I'm considering for the next series, or I might go into prediction as I consider machine learning vs. Bayesian learning. I'm not sure yet.

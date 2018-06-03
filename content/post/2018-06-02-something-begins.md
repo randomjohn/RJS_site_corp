@@ -2,7 +2,7 @@
 title: Something begins - RJS Data Science!
 author: John
 date: '2018-06-02'
-slug: something-begins
+slug: 2018-06-02-something-begins
 categories:
   - General
 tags:

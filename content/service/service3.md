@@ -1,5 +1,5 @@
 +++
-title = "Reproducible workflows"
+title = "3. Reproducible workflows"
 date = '2017-11-04'
 +++
 

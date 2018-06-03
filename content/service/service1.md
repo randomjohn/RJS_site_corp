@@ -1,14 +1,15 @@
 +++
-title = "Exploratory data analysis"
+title = "1. Predictive modeling"
 date = '2017-11-04'
 +++
 
-Quickly learn from your data.
+Inform future decisions using your data.
 
 <!--more-->
 
-![](images/eda.jpg)
+![](images/fortune.png)
 
-Exploratory data analysis is the art and science of discovering relationships in data. It employs techniques from data visualization, description, transformation, and modeling to generate questions and hypotheses about the processes underlying your data. Effective data visualization can show you relationships among several variables, and effective modeling can quantify those relationships. 
 
-_Image credit: [axelle b](http://www.publicdomainpictures.net/view-image.php?image=150558&picture=businesswoman-computer)_
+A rigorous predictive modeling approach can illuminate the power -- and the limitations -- of your data in decision making. Inform the optimal decision while guarding against overconfidence and bias.
+
+_Image credit: me! (c) 2017_

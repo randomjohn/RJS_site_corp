@@ -1,15 +1,14 @@
 +++
-title = "Predictive modeling"
+title = "4. Effective communication"
 date = '2017-11-04'
 +++
 
-Inform future decisions using your data.
+Help others understand your decisions.
 
 <!--more-->
 
-![](images/fortune.png)
+![](images/blackboard.jpg)
 
+When you have made your predictions and your decisions, chances are you have to justify your decisions to other stakeholders. Any good analytics workflow will account for the need to effectively communicate results either as a report or a presentation. Modern tools will even adjust reports and presentations as new data comes in.
 
-A rigorous predictive modeling approach can illuminate the power -- and the limitations -- of your data in decision making. Inform the optimal decision while guarding against overconfidence and bias.
-
-_Image credit: me! (c) 2017_
+_Image credit: [kai Stachowiak](http://www.publicdomainpictures.net/view-image.php?image=137362&picture=successful)_

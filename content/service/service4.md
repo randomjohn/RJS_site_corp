@@ -1,14 +1,14 @@
 +++
-title = "Effective communication"
+title = "2. Exploratory data analysis"
 date = '2017-11-04'
 +++
 
-Help others understand your decisions.
+Quickly learn from your data.
 
 <!--more-->
 
-![](images/blackboard.jpg)
+![](images/eda.jpg)
 
-When you have made your predictions and your decisions, chances are you have to justify your decisions to other stakeholders. Any good analytics workflow will account for the need to effectively communicate results either as a report or a presentation. Modern tools will even adjust reports and presentations as new data comes in.
+Exploratory data analysis is the art and science of discovering relationships in data. It employs techniques from data visualization, description, transformation, and modeling to generate questions and hypotheses about the processes underlying your data. Effective data visualization can show you relationships among several variables, and effective modeling can quantify those relationships. 
 
-_Image credit: [kai Stachowiak](http://www.publicdomainpictures.net/view-image.php?image=137362&picture=successful)_
+_Image credit: [axelle b](http://www.publicdomainpictures.net/view-image.php?image=150558&picture=businesswoman-computer)_

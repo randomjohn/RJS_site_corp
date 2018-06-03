@@ -10,7 +10,7 @@ paginatePath = "page"
 
 [params]
     name = "RJS Data Science LLC"
-    description = "Professional statistician and data science consultant with 15+ years experience"
+    description = "Professional statistician and data science consultant with 25+ years experience"
     subheader = "You spend a lot of time and money collecting data. How do you use it to make decisions?"
     email = "john@rjsdatascience.com"
     phone = "(919)368-4255"

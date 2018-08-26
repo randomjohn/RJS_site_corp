@@ -1,0 +1,290 @@
+---
+title: Cancer rates in SC - introduction to the tidybayes package
+author: John
+date: '2018-08-26'
+slug: cancer-rates-in-sc-introduction-to-the-tidybayes-package
+categories:
+  - South Carolina
+tags:
+  - Bayesian
+  - Stan
+draft: false
+---
+
+
+
+<div id="introduction-and-purpose" class="section level1">
+<h1>Introduction and Purpose</h1>
+<p>In the last series of examples, I focused on Bayesian modeling using the Stan package. This useful package on the surface makes Bayesian analysis a lot easier, but from my point of view the real power (of this and other packages such as JAGS and BUGS) is the ability to specify a model directly from the science and a few statistical ideas. I placed less emphasis on diagnostics, evaluation, and interpretation of the model. In this series I go further into these topics.</p>
+</div>
+<div id="the-data" class="section level1">
+<h1>The data</h1>
+<p>I want to use a second example for this series, and I have chosen new cancer cases by county in South Carolina. This data is available for download from the website for the <a href="http://www.scdhec.gov/Apps/Health/EPHT/Default.aspx">South Carolina Environmental Public Health Tracking</a> program. You can choose new cases, age-adjusted new cases, new cases over 5 years, and other criteria. I chose just the new cases. It will bring up a chloropleth map when you make your selection, but you can pull up a table and download it. Be careful – though they say it’s for Excel, it’s really an HTML table with some extra parts.</p>
+<p>First, the setup:</p>
+<pre class="r"><code>library(tidyverse)
+library(viridis)
+library(rvest)
+library(xml2)
+library(stringr)
+library(rstanarm)
+library(tidybayes)
+
+options(mc.cores = 4)
+`%nin%` &lt;- function (x, table) match(x, table, nomatch = 0L) == 0L</code></pre>
+<p>I load the <code>tidyverse</code> for data manipulation, <code>viridis</code> for some visualization, <code>rvest</code> and <code>xml2</code> to read data off the web (or web data downloaded locally), <code>stringr</code> for more data cleaning, and <code>rstanarm</code> and <code>tidybayes</code> for analysis.</p>
+<p>I also define the <code>%nin%</code> function which will help us filter parameters later on. You could also load the <code>Hmisc</code> package, which is otherwise excellent, but I wanted to go lightweight here.</p>
+<div id="new-cancer-cases" class="section level2">
+<h2>New cancer cases</h2>
+<p>I’ve already downloaded the cancer data to my local drive, but it is in the original state. I load and clean that data here. Then I show a quick visualization. I won’t show the legends in these quick visualizations because they will take up too much space.</p>
+<pre class="r"><code>new_cancer &lt;- xml2::read_html(&quot;data/cancer_cases_new_sc_2010-2014.xls&quot;) %&gt;% 
+  html_node(&quot;table&quot;) %&gt;% 
+  html_table(fill = TRUE) %&gt;% 
+  slice(3:49) %&gt;% 
+  `names&lt;-`(c(&quot;county&quot;, 2001:2014)) %&gt;% 
+  gather(year,new_cases,starts_with(&quot;2&quot;)) %&gt;% 
+  mutate(new_cases = as.numeric(new_cases),
+         year = as.numeric(year))
+
+new_cancer %&gt;%
+  ggplot(aes(x = year, y = new_cases, group = county)) +
+  geom_line()</code></pre>
+<p><img src="/post/2018-08-26-cancer-rates-in-sc-introduction-to-the-tidybayes-package_files/figure-html/newcases-1.png" width="672" /></p>
+</div>
+<div id="population" class="section level2">
+<h2>Population</h2>
+<p>If you notice in the visualization, there are some counties that have a lot of cases of cancer! If you’re an epidemiologist or have had other statistical training, your next natural question is “but what is the population in those counties”? After all, we want to look at new cancer <em>rates</em>, not raw cases. So we download the population. This data is based on Census estimates, and contains both intercensus estimates (2001 – 2010) and postcensus estimates (2011 – 2014). We ignore the differences of estimates between censuses and those after the last census (interpolation vs. extrapolation), and treat them all as estimates on equal footing, but they are in different tables and have to be put together. These data can be found on the SC state government <a href="http://abstract.sc.gov">website</a>. We also give a quick visualization.</p>
+<pre class="r"><code># get population information, downloaded from
+# http://abstract.sc.gov/chapter14/pop5.html
+sc_pop_county_est1 &lt;- xml2::read_html(&quot;http://abstract.sc.gov/chapter14/pop6.html&quot;) %&gt;% 
+  html_node(&quot;table&quot;) %&gt;% 
+  html_table() %&gt;% 
+  `names&lt;-`(c(&quot;county&quot;, 2000:2009)) %&gt;% 
+  filter(!(county %in% c(&quot;South Carolina&quot;, &quot;South  Carolina&quot;)))   
+         
+sc_pop_county_est2 &lt;- xml2::read_html(&quot;http://abstract.sc.gov/chapter14/pop7.html&quot;) %&gt;% 
+  html_node(&quot;table&quot;) %&gt;% 
+  html_table() %&gt;% 
+  select(1:6) %&gt;% 
+  `names&lt;-`(c(&quot;county&quot;, 2010:2014)) %&gt;% 
+  filter(!(county %in% c(&quot;South Carolina&quot;, &quot;South  Carolina&quot;)))   
+
+sc_pop_county_est &lt;- sc_pop_county_est1 %&gt;% 
+  full_join(sc_pop_county_est2) %&gt;% 
+  gather(year, est_pop, -1) %&gt;% 
+  mutate(year = as.numeric(year),
+         est_pop = as.numeric(str_remove(est_pop,&quot;,&quot;)))</code></pre>
+<pre><code>## Joining, by = &quot;county&quot;</code></pre>
+<pre class="r"><code>sc_pop_county_est %&gt;% 
+  ggplot(aes(x = year, y = est_pop, group = county)) +
+  geom_line() + scale_y_log10()</code></pre>
+<p><img src="/post/2018-08-26-cancer-rates-in-sc-introduction-to-the-tidybayes-package_files/figure-html/population-1.png" width="672" /></p>
+</div>
+<div id="cancer-rates" class="section level2">
+<h2>Cancer rates</h2>
+<p>Now we combine the two datasets from above.</p>
+<pre class="r"><code>new_cancer %&gt;% 
+  full_join(sc_pop_county_est %&gt;% filter(year &gt; 2000)) %&gt;% 
+  mutate(new_case_rate = new_cases / est_pop) %&gt;% 
+  filter(county != &quot;Unknown&quot;) %&gt;% 
+  mutate(year_mod = year - 2000,
+         log_pop = log(est_pop)) -&gt;
+  new_cancer_rate</code></pre>
+<pre><code>## Joining, by = c(&quot;county&quot;, &quot;year&quot;)</code></pre>
+<p>If you notice, I added two new variables to the dataset. I did that mostly for efficiency later on, but this was something I added rather late into the analysis process. I’ll explain <code>year_mod</code> and <code>log_pop</code> when I get to the analysis. Don’t worry about them for now.</p>
+</div>
+</div>
+<div id="preliminary-analysis" class="section level1">
+<h1>Preliminary analysis</h1>
+<p>There are a lot of questions we can now ask of this dataset. First, a quick visualization.</p>
+<pre class="r"><code>new_cancer_rate %&gt;% 
+  ggplot(aes(x = year, y = new_case_rate, group = county)) +
+  geom_line() + 
+  scale_color_viridis(discrete = TRUE) +
+  scale_y_log10()</code></pre>
+<p><img src="/post/2018-08-26-cancer-rates-in-sc-introduction-to-the-tidybayes-package_files/figure-html/unnamed-chunk-1-1.png" width="672" /></p>
+<p>Though having little to do with Bayesian analysis, we might take a quick peek at who had the best and worst cancer rates over the years. Here’s the worst:</p>
+<pre class="r"><code>new_cancer_rate %&gt;% 
+  group_by(year) %&gt;% 
+  mutate(county_rank = rank(new_case_rate, na.last = FALSE, ties.method = &quot;first&quot;)) %&gt;% 
+  summarize(county = county[county_rank == min(county_rank, na.rm = TRUE)],
+            new_case_rate = max(new_case_rate, na.rm=TRUE))</code></pre>
+<pre><code>## # A tibble: 14 x 3
+##     year county    new_case_rate
+##    &lt;dbl&gt; &lt;chr&gt;             &lt;dbl&gt;
+##  1  2001 Saluda          0.00646
+##  2  2002 Allendale       0.00619
+##  3  2003 Edgefield       0.00679
+##  4  2004 Jasper          0.00715
+##  5  2005 Jasper          0.00746
+##  6  2006 Jasper          0.00757
+##  7  2007 Allendale       0.00807
+##  8  2008 Dillon          0.00725
+##  9  2009 Dillon          0.00830
+## 10  2010 Edgefield       0.00776
+## 11  2011 Hampton         0.00928
+## 12  2012 Jasper          0.00826
+## 13  2013 Richland        0.00729
+## 14  2014 Richland        0.00734</code></pre>
+<p>And here’s the best:</p>
+<pre class="r"><code>new_cancer_rate %&gt;% 
+  group_by(year) %&gt;% 
+  mutate(county_rank = rank(new_case_rate, na.last = FALSE, ties.method = &quot;first&quot;)) %&gt;% 
+  summarize(county = county[county_rank == max(county_rank, na.rm = TRUE)],
+            new_case_rate = min(new_case_rate, na.rm=TRUE))</code></pre>
+<pre><code>## # A tibble: 14 x 3
+##     year county     new_case_rate
+##    &lt;dbl&gt; &lt;chr&gt;              &lt;dbl&gt;
+##  1  2001 Georgetown       0.00328
+##  2  2002 Oconee           0.00405
+##  3  2003 McCormick        0.00390
+##  4  2004 Calhoun          0.00364
+##  5  2005 McCormick        0.00398
+##  6  2006 McCormick        0.00402
+##  7  2007 McCormick        0.00380
+##  8  2008 Calhoun          0.00412
+##  9  2009 McCormick        0.00399
+## 10  2010 Georgetown       0.00411
+## 11  2011 McCormick        0.00418
+## 12  2012 McCormick        0.00407
+## 13  2013 McCormick        0.00414
+## 14  2014 McCormick        0.00434</code></pre>
+<p>You’ll see the same names popping up over and over in these superlatives analysis, and it might be an interesting question as to why these counties have such good or bad rates. Explanations might range from some counties may be retirement destinations for people less likely to get cancer to something more nefarious like pollution. Or you might worry about smoking rates by county. But that’s not in our dataset.</p>
+</div>
+<div id="modeling" class="section level1">
+<h1>Modeling</h1>
+<p>Now we get to the good stuff. The model here will be a Poisson regression with an offset. Why? The Poisson regression part comes from the fact that we are modeling count data. (We could have also used the more general negative binomial model that was the final one we used with the flight dataset.) The offset is something you may not have encountered before. You use it when you are looking at Poisson rates with varying levels of exposure. Here, we have counties with varying levels of population (and those levels vary over the years for each county). You would also use an offset if you are looking at the incidence of adverse events in patients on a particular treatment because patients have different amounts of times they are exposed to treatment. You might also use offsets to compare customer rates in stores that have varying amounts of time that they are open. The trick to offsets is that you have to take the logarithm of the “exposure” - in this case population. Now you see why I created <code>log_pop</code> in the dataset above. The reason we have to do this is because with Poisson regression, we use the log link function.</p>
+<p>While I’m on theory, let me explain the <code>year_mod</code> variable. I plan to look at the change in new cancer case rates over time. Our dataset begins in 2001, but if I use a raw year in the model, the sampling algorithm may get confused and/or the scaling of parameters based on year might look strange. It’s better to represent year in, say, number of years after 2000 (as I did).</p>
+<p>Ok, with that long-winded explanation out of the way, let’s get to the modeling. I mentioned last time you can use the <code>rstanarm</code> package to do the modeling. This is useful because you don’t have to worry as much about the details of running Stan and can use a familiar syntax. (Side note: you do have to worry about some details. At one point I forgot to take the log of the population to use as an offset. Stan refused to run the model. It took a bit of time before I realized my mistake.) For priors we will use normal distributions that cover reasonable values for our parameters. If you are worried about strange values, you could use a Student <span class="math inline">\(t\)</span> or even go wild and crazy with a Cauchy. Now the <code>prior</code> affects our county and year parameters, but they may not be on the same scale as the intercept. Thus, <code>rstanarm</code> offers the <code>prior_intercept</code> so you can put a reasonable prior on all your parameters.</p>
+<pre class="r"><code>bayes_pois_fit &lt;- new_cancer_rate %&gt;% 
+  stan_glm(new_cases ~ year_mod + county + offset(log_pop), 
+           family = poisson(link = &quot;log&quot;),
+           data = .,
+           prior = normal(0,1),
+           prior_intercept = normal(0,5))
+
+bayes_pois_fit</code></pre>
+<pre><code>## stan_glm
+##  family:       poisson [log]
+##  formula:      new_cases ~ year_mod + county + offset(log_pop)
+##  observations: 644
+##  predictors:   47
+## ------
+##                    Median MAD_SD
+## (Intercept)        -5.2    0.0  
+## year_mod            0.0    0.0  
+## countyAiken        -0.2    0.0  
+## countyAllendale    -0.2    0.0  
+## countyAnderson      0.0    0.0  
+## countyBamberg       0.0    0.0  
+## countyBarnwell     -0.2    0.0  
+## countyBeaufort      0.1    0.0  
+## countyBerkeley     -0.2    0.0  
+## countyCalhoun       0.0    0.0  
+## countyCharleston   -0.1    0.0  
+## countyCherokee     -0.1    0.0  
+## countyChester       0.1    0.0  
+## countyChesterfield -0.1    0.0  
+## countyClarendon     0.0    0.0  
+## countyColleton      0.1    0.0  
+## countyDarlington   -0.1    0.0  
+## countyDillon       -0.1    0.0  
+## countyDorchester   -0.2    0.0  
+## countyEdgefield    -0.2    0.0  
+## countyFairfield     0.0    0.0  
+## countyFlorence     -0.1    0.0  
+## countyGeorgetown    0.2    0.0  
+## countyGreenville   -0.1    0.0  
+## countyGreenwood     0.0    0.0  
+## countyHampton      -0.1    0.0  
+## countyHorry         0.1    0.0  
+## countyJasper       -0.3    0.0  
+## countyKershaw       0.0    0.0  
+## countyLancaster    -0.1    0.0  
+## countyLaurens       0.0    0.0  
+## countyLee          -0.1    0.0  
+## countyLexington    -0.2    0.0  
+## countyMarion       -0.1    0.0  
+## countyMarlboro     -0.1    0.0  
+## countyMcCormick     0.3    0.0  
+## countyNewberry      0.0    0.0  
+## countyOconee        0.2    0.0  
+## countyOrangeburg    0.0    0.0  
+## countyPickens      -0.1    0.0  
+## countyRichland     -0.3    0.0  
+## countySaluda       -0.1    0.0  
+## countySpartanburg  -0.1    0.0  
+## countySumter       -0.1    0.0  
+## countyUnion         0.1    0.0  
+## countyWilliamsburg  0.0    0.0  
+## countyYork         -0.2    0.0  
+## 
+## Sample avg. posterior predictive distribution of y:
+##          Median MAD_SD
+## mean_PPD 502.1    1.2 
+## 
+## ------
+## For info on the priors used see help(&#39;prior_summary.stanreg&#39;).</code></pre>
+</div>
+<div id="visualization-of-the-posterior-distributions" class="section level1">
+<h1>Visualization of the posterior distributions</h1>
+<p>This post is getting long, and it is getting late, but I did want to at least touch on <code>tidybayes</code>. While for a lot of the time the Stan community used the <code>bayesplot</code> package (which is very nice in some ways), <code>tidybayes</code> makes working with Stan fit objects feel more like working with <code>dplyr</code> and <code>ggplot2</code>.</p>
+<p>The first plot is an easy one - just the posterior distribution of the <code>year_mod</code> coefficient, which will answer the question of whether new cancer incidence rates as a whole are going up over time. We’ll compare this distribution to 0.</p>
+<pre class="r"><code>bayes_pois_fit %&gt;% 
+  tidy_draws() %&gt;% 
+  gather(variable, draw, 4:ncol(.)) %&gt;% 
+  filter(variable %in% c( &quot;year_mod&quot;)) %&gt;% 
+  ggplot(aes(x = draw, y = fct_reorder(variable, draw, .desc = TRUE))) +
+  geom_halfeyeh(fun.data = median_hdi) + 
+  scale_y_discrete(labels = &quot;&quot;) +
+  ylab(&quot;&quot;) + xlab(&quot;log(relative new cancer case rate per year increase)&quot;)</code></pre>
+<p><img src="/post/2018-08-26-cancer-rates-in-sc-introduction-to-the-tidybayes-package_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
+<p>The first things to notice is that we started with the Stan fit object, and used <code>tidy_draws</code> to pull out the posterior samples. We’re left with a <code>tbl_df</code>, so this fits in with the tidy tools philosophy. We can then use <code>tidyr</code> and <code>dplyr</code> to get our data the way we want it. I should point out here that a lot of times, parameters will come out of Stan looking like <code>parameter[a,b]</code> or something like that. <code>tidybayes</code> has functions to handle those situation easily. Here we only had that one factor with 46 levels (counties), so it was just easier to use <code>tidy_draws</code> directly and then <code>gather</code> and <code>filter</code> in this particular case. Because you’re using tidy tools, the choice is up to you.</p>
+<p><code>tidybayes</code> also adds the <code>geom_halfeyeh</code> and other, similar geoms that you might want to use when you are visualizing posterior distribution draws. It also provides complementary statistics functions like <code>median_hdi</code>.</p>
+<p>If you want to switch the visualization to a pointrange (density plots just aren’t your thing), you can do that easily using <code>stat_pointinterval</code> (or <code>stat_pointintervalh</code>):</p>
+<pre class="r"><code>bayes_pois_fit %&gt;% 
+  tidy_draws() %&gt;% 
+  gather(variable, draw, 4:ncol(.)) %&gt;% 
+  filter(variable %in% c( &quot;year_mod&quot;)) %&gt;% 
+  ggplot(aes(x = draw, y = variable)) +
+  stat_pointintervalh(.width = c(0.8, 0.95)) + 
+  scale_y_discrete(labels = &quot;&quot;) +
+  ylab(&quot;&quot;) + xlab(&quot;log(relative new cancer case rate per year increase)&quot;)</code></pre>
+<p><img src="/post/2018-08-26-cancer-rates-in-sc-introduction-to-the-tidybayes-package_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+<p>There are a couple of things I like about this approach over the <code>bayesplot</code> approach. Here I can piece together the graph I want in a natural <code>ggplot2</code>-like way. With <code>bayesplot</code>, you get the whole package in one command, though you can alter or add <code>ggplot2</code> layers normally. But this just feels more natural in my analysis flow.</p>
+<p>Regarding interpretation, the answer is yes, from this data, there is a very high probability that new cancer rates are going up over time, albeit slowly. (Keep in mind this is on a log scale, so the coefficient 0.006 means multiply the current new cancer rate in SC by exp(0.006) = 1.006 to get next year’s overall estimate.)</p>
+<p>Now we get a little more fancy and look at rates by county:</p>
+<pre class="r"><code>bayes_pois_fit %&gt;% 
+  tidy_draws() %&gt;% 
+  gather(variable, draw, 4:ncol(.)) %&gt;% 
+  filter(variable %nin% c(&quot;year_mod&quot;, &quot;(Intercept)&quot;)) %&gt;% 
+  ggplot(aes(x = draw, y = fct_reorder(variable, draw, .desc = TRUE))) +
+  geom_halfeyeh(fun.data = median_hdi) + 
+  scale_y_discrete(labels = function(.x) str_remove(.x,&quot;county&quot;)) +
+  ylab(&quot;County&quot;) + xlab(&quot;log(relative new cancer case rate)&quot;) </code></pre>
+<p><img src="/post/2018-08-26-cancer-rates-in-sc-introduction-to-the-tidybayes-package_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+<p>The forest plot version looks like this:</p>
+<pre class="r"><code>bayes_pois_fit %&gt;% 
+  tidy_draws() %&gt;% 
+  gather(variable, draw, 4:ncol(.)) %&gt;% 
+  filter(variable %nin% c(&quot;year_mod&quot;, &quot;(Intercept)&quot;)) %&gt;% 
+  ggplot(aes(x = draw, y = fct_reorder(variable, draw, .desc = TRUE))) +
+  stat_pointintervalh(.width = c(0.8, 0.95)) + 
+  scale_y_discrete(labels = function(.x) str_remove(.x,&quot;county&quot;)) +
+  ylab(&quot;County&quot;) + xlab(&quot;log(relative new cancer case rate)&quot;) </code></pre>
+<p><img src="/post/2018-08-26-cancer-rates-in-sc-introduction-to-the-tidybayes-package_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+<p>There’s a couple of neat tricks used above to easily pretty up this graph. First, the variable names for the counties come out of the analysis looking like <code>countyMcCormick</code>, for example. We clean that up using the <code>str_remove</code> function from the <code>stringr</code> package inside of <code>scale_y_discrete</code>. We are then left with the raw county names to appear on the tick marks. Another is using <code>%nin%</code> (that strange function I defined way above instead of loading all of <code>Hmisc</code>) inside of the <code>filter</code> function to select just the county variables. You may or may not have to get more clever when you do your own analysis, or you might use the functionality inside of <code>spread_draws</code> or <code>gather_draws</code>. Finally, I used <code>fct_reorder</code> inside of the <code>aes</code> function in <code>ggplot</code> above to reorder the counties in a meaningful way for interpretation. If your plot looks like an uninterpretable jumble, give that function a look; it’s part of the <code>forcats</code> package loaded by <code>tidyverse</code>.</p>
+<p>So, for interpretation: if we look a the bottom of the graph we find Georgetown, Oconee, and McCormick counties, which we saw when we looked at the worst counties. At the top, we see Richland and Jasper, which matches our exploratory analysis above. Oconee is way out of the way with no heavy industry that I know of, so it’s pretty curious it’s showing some of the highest rates.</p>
+</div>
+<div id="conclusion" class="section level1">
+<h1>Conclusion</h1>
+<p>Well, that does it for this introduction. I want to take a deeper dive into <code>tidybayes</code> next time using this same dataset and model. We accomplished a lot in this post:</p>
+<ul>
+<li>Downloaded and processed data on new cancer rates in SC</li>
+<li>Scraped the statistical abstract website of SC for population estimates from the census</li>
+<li>“Mashed up” the two datasets</li>
+<li>Some exploratory analysis</li>
+<li>Formulated a rather sophisticated model using the <code>rstanarm</code> package</li>
+<li>Presented some results, compared them back to the exploratory analysis, and provided some interpretation</li>
+<li>As a bonus, created a function that really should have been a part of base R to begin with</li>
+</ul>
+</div>

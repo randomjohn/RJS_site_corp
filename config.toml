@@ -26,8 +26,9 @@ paginatePath = "page"
     showRecentWorks = false
     showDownload = false
     showClients = false
+    comments = true
     
-    disable_highlight = false
+    disable_highlight = true
     highlightjsVersion = "9.11.0"
     highlightjsCDN = "//cdn.bootcss.com"
     highlightjsLang = ["r", "yaml"]

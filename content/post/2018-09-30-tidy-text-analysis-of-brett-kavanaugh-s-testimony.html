@@ -265,7 +265,7 @@ trans_tidy %&gt;%
   geom_bar(stat = &quot;identity&quot;) +
   labs(x = &quot;Stemmed word&quot;, y = &quot;Times used in Kavanaugh&#39;s testimony&quot;) +
   coord_flip() +
-  facet_wrap(~ last_speaker_party, scales = &quot;free_x&quot;) +
+  facet_wrap(~ last_speaker_party, scales = &quot;free&quot;) +
   scale_x_discrete(labels = function(x) str_remove(x,&quot;^\\d+_&quot;))</code></pre>
 <pre><code>## Joining, by = &quot;word&quot;</code></pre>
 <p><img src="/post/2018-09-30-tidy-text-analysis-of-brett-kavanaugh-s-testimony_files/figure-html/unnamed-chunk-13-1.png" width="672" /></p>

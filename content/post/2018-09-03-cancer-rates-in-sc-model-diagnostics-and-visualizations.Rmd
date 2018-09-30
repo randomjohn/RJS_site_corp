@@ -1,0 +1,42 @@
+---
+title: Cancer rates in SC - model diagnostics and visualizations
+author: John
+date: '2018-09-03'
+slug: cancer-rates-in-sc-model-diagnostics-and-visualizations
+categories:
+  - South Carolina
+tags:
+  - Bayesian
+  - Stan
+draft: true
+---
+
+# Introduction and purpose
+
+In the [last post](/post/cancer-rates-in-sc-introduction-to-the-tidybayes-package) we scraped new cancer incidence and population data from the South Carolina government website, merged them together, and ran a model to assess relative cancer rates by county. We then visualized the posterior distributions briefly using the `tidybayes` package. Here we dig deeper into model diagnostics using `tidybayes` and also introduce the `loo` package (stands for leave-one-out).
+
+<!--more-->
+
+# Setup and Data
+
+We no longer need the `rvest` and `xml2` packages, so we load the same packages as last time, with the addition of `loo`.
+
+```{r setup, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(viridis)
+library(stringr)
+library(rstanarm)
+library(tidybayes)
+library(loo)
+
+options(mc.cores = 4)
+`%nin%` <- function (x, table) match(x, table, nomatch = 0L) == 0L
+```
+
+You can replicate the steps of the last post to get data, but I saved that as a csv file for ease. I also saved the object returned by `stan_glm`.
+
+```{r}
+new_cancer_rate <- read_csv("data/cancer_cases_new_sc_2010-2014.xls")
+bayes_pois_fit <- load("data/new_cancer_rate_fit.RData")
+```
+

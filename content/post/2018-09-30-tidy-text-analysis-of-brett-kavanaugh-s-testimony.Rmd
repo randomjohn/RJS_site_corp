@@ -8,6 +8,7 @@ categories:
 tags:
   - tidy data
   - text analysis
+draft: false
 ---
 
 # Introduction and purpose
@@ -132,7 +133,7 @@ This isn't too helpful. Grassley does have a lot of words, but that make sense b
 
 # Ford
 
-It will be somewhat harder to gauge Dr. Ford's testimony by last speaker's party, because the Republicans largely relied on a female sex crimes prosecutor to do their questioning.
+It will be somewhat difficult to gauge Dr. Ford's testimony by last speaker's party, because the Republicans largely relied on a female sex crimes prosecutor to do their questioning.
 
 ```{r}
 trans_tidy %>% 
@@ -148,7 +149,7 @@ trans_tidy %>%
   labs(x = "\"Time\" (as given by line number)", y = "Sentiment", color = "Last Speaker\nParty")
 ```
 
-I'm not surprised that this analysis showed a lot of negative sentiment, but I am surprised that Dr. Ford for a large part kept her testimony within a tight window. Notice the large amount of green - this indicates the last speaker was the "nonpartisan" staff counsel Rachel Mitchell.
+I'm not surprised that this analysis showed a lot of negative sentiment, but I am surprised that Dr. Ford for a large part kept her testimony within a tight window for sentiment. Notice the large amount of green - this indicates the last speaker was the "nonpartisan" staff counsel Rachel Mitchell.
 
 ## Words in general
 
@@ -206,7 +207,7 @@ trans_tidy_raw %>%
   count(last_speaker_party)
 ```
 
-Not a lot too see here. I did not a lot of Republicans used their time to make their own statements about the hearing rather than ask questions (e.g. Lindsey Graham). Also, the count includes Kavanaugh's opening statment.
+Not a lot too see here. I did not a lot of Republicans used their time to make their own statements about the hearing rather than ask questions (e.g. Lindsey Graham). Also, the count includes Judge Kavanaugh's opening statment.
 
 Now do a sentiment analysis after Democrats and Republicans.
 
@@ -223,7 +224,7 @@ Looks like he spoke negatively after each party, on average. This was expected, 
 
 ## Kavanaugh's sentiment over time
 
-He was a sour and combative guy. Let's see how he fared over time, with `line_number` as a surrogate for time.
+Judge Kavanaugh was a sour and combative guy. Let's see how he fared over time, with `line_number` as a surrogate for time.
 
 ```{r}
 trans_tidy %>% 
@@ -239,7 +240,7 @@ trans_tidy %>%
   labs(x = "\"Time\" (as given by line number)", y = "Sentiment", color = "Last Speaker\nParty")
 ```
 
-His opening statement (which included a lot of crying and angry statements) was on the balance negative, but he waffled all over the place. This is somewhat expected. During questioning, the sentiment content of words stayed within a tighter window for the most part.
+His opening statement (which included a lot of crying and angry statements) was on the balance negative, but he went all over the place. This is somewhat expected. During questioning, the sentiment content of words stayed within a tighter window for the most part.
 
 ## Beer!
 
@@ -299,6 +300,8 @@ trans_tidy %>%
   scale_x_discrete(labels = function(x) str_remove(x,"^\\d+_"))
 ```
 
+Nothing seems out of the ordinary for someone who is called to explain his beer consumption and attitudes/behavior toward women in school.
+
 # Conclusion
 
-This cursory analysis has already yielded some interesting details about how the two different witnesses in the Kavanaugh hearing responded to the Senate committee, and hopefully the data cleaning instructions and code at the top can help you with your own analysis.
+There are of course a lot of limitations to this approach, such as whether Judge Kavanaugh adequately addressed questions directed at him and the tone and nonverbal cues given by both witnesses. However, this cursory analysis has already yielded some interesting details about how the two different witnesses, and hopefully the data cleaning instructions and code at the top can help you with your own analysis. 

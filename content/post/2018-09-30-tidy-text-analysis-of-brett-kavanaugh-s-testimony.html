@@ -1,0 +1,278 @@
+---
+title: Tidy text analysis of Brett Kavanaugh's testimony
+author: John
+date: '2018-09-30'
+slug: tidy-text-analysis-of-brett-kavanaugh-s-testimony
+categories:
+  - General
+tags:
+  - tidy data
+  - text analysis
+draft: false
+---
+
+
+
+<div id="introduction-and-purpose" class="section level1">
+<h1>Introduction and purpose</h1>
+<p>On Sept 27, 2018, an extraordinary hearing took place where the nominee for the Supreme Court Judge Brett Kavanaugh addressed questions from the Senate Judiciary Committee, as did his accuser Dr. Christine Ford. This text analysis is designed to uncover interesting patterns in how they spoke.</p>
+<!--more-->
+</div>
+<div id="libraries" class="section level1">
+<h1>Libraries</h1>
+<p>We will use tidy methods to format and analyze the text. We load the tidy text analysis packages, as well as <code>SnowballC</code> to do basic word stemming later on (so that, for example, “beer” and “beers” are counted the same).</p>
+<pre class="r"><code>library(tidyverse)
+library(tidytext)
+library(SnowballC)</code></pre>
+<p>Committee names and party - for analysis by party later on.</p>
+<pre class="r"><code>names_party &lt;- c(
+  &quot;GRASSLEY&quot; = &quot;Republican&quot;,
+  &quot;HATCH&quot; = &quot;Republican&quot;,
+  &quot;GRAHAM&quot; = &quot;Republican&quot;,
+  &quot;CORNYN&quot; = &quot;Republican&quot;,
+  &quot;LEE&quot; = &quot;Republican&quot;,
+  &quot;CRUZ&quot; = &quot;Republican&quot;,
+  &quot;FLAKE&quot; = &quot;Republican&quot;,
+  &quot;TILLIS&quot; = &quot;Republican&quot;,
+  &quot;SASSE&quot; = &quot;Republican&quot;,
+  &quot;CRAPO&quot; = &quot;Republican&quot;,
+  &quot;KENNEDY&quot; = &quot;Republican&quot;,
+  &quot;FEINSTEIN&quot; = &quot;Democrat&quot;,
+  &quot;LEAHY&quot; = &quot;Democrat&quot;,
+  &quot;WHITEHOUSE&quot; = &quot;Democrat&quot;,
+  &quot;KLOBUCHAR&quot; = &quot;Democrat&quot;,
+  &quot;COONS&quot; = &quot;Democrat&quot;,
+  &quot;BLUMENTHAL&quot; = &quot;Democrat&quot;,
+  &quot;HIRONO&quot; = &quot;Democrat&quot;,
+  &quot;BOOKER&quot; = &quot;Democrat&quot;,
+  &quot;HARRIS&quot; = &quot;Democrat&quot;,
+  &quot;MITCHELL&quot; = &quot;Nonpartisan&quot;,
+  &quot;FORD&quot; = &quot;Witness&quot;,
+  &quot;BROMWICH&quot; = &quot;Witness&quot;,
+  &quot;KAVANAUGH&quot; = &quot;Witness&quot;
+)</code></pre>
+</div>
+<div id="load-and-preprocess-data" class="section level1">
+<h1>Load and preprocess data</h1>
+<p>The transcript was copied and pasted directly from a <a href="https://www.washingtonpost.com/news/national/wp/2018/09/27/kavanaugh-hearing-transcript/?utm_term=.0f77c0245e05">Washington Post story</a> on Sept 29, 2018 and saved to a raw ASCII file transcript.txt. I copied only the part where the transcript of the hearing began (and skipped the introduction of the speakers). That text file is loaded into R and pre-processed here. I don’t include the transcript publicly because I don’t want to run into copyright issues, but I do load it using <code>readLines</code> with an encoding of UTF-8 into a character vector called <code>trans_raw</code> (not shown).</p>
+<p>Preprocessing includes determining the speaker (in the Washington Post transcript, the speaker is given by last name in all caps, followed by a colon and space, and if a speaker speaks multiple lines the subsequent lines do not name the speaker). A regular expression is used to extract the speaker into a new column and then delete it from the text. The <code>fill</code> command is used for those subsequent lines where the speaker is implied. Some unhelpful lines are deleted from the transcript, including crosstalk and laughter where the “bag of words” philosophy is not helpful.</p>
+<p>In addition to the preprocessing, I define a few new variables - the speaker number (a simple ordering of the speakers), the party of the speaker (defined by a mapping above), the last speaker and party (to, for example, examine sentiment or word usage in response to another speaker).</p>
+<p>Finally, I convert the transcript into tidy format both with (<code>_raw</code>) and without U.S. English stop words.</p>
+<pre class="r"><code>n_lines &lt;- length(trans_raw)
+
+trans_df &lt;- data_frame(raw = trans_raw) %&gt;% 
+  mutate(line_number = row_number()) %&gt;% 
+  slice(c(1:1310, 1342:n_lines)) %&gt;% # you may have to tweak this
+  mutate(is_ford = (row_number() &lt; 1310), # you may have to tweak the line number here
+         speaker = str_extract(raw, &quot;^[\\(\\)\\?A-Z]{3,}&quot;)) %&gt;% 
+  mutate(line = str_remove(raw, &quot;^[\\(\\)\\?A-Z]+: &quot;)) %&gt;% 
+  fill(speaker) %&gt;% 
+  mutate(last_speaker = lag(speaker, order_by = line_number)) %&gt;% 
+  mutate(speaker_change = (line_number == 1 | speaker != lag(speaker, order_by = line_number)),
+         speaker_number = cumsum(speaker_change)) %&gt;% 
+  filter(!(str_detect(speaker, &quot;CROSSTALK|CORRECTED|LAUGHTER|RECESS|GAVEL&quot;))) %&gt;% 
+  mutate(party = names_party[speaker]) %&gt;% 
+  select(line_number, speaker_number, speaker, party, line)
+
+speakers_df &lt;- trans_df %&gt;% 
+  group_by(speaker_number, speaker) %&gt;% 
+  slice(1) %&gt;% 
+  select(speaker_number, speaker) %&gt;% 
+  ungroup() %&gt;% 
+  filter(speaker != &quot;(UNKNOWN)&quot;) %&gt;% 
+  mutate(last_speaker = lag(speaker),
+         last_speaker_party = names_party[last_speaker])
+
+trans_df &lt;- trans_df %&gt;% 
+  right_join(speakers_df) %&gt;% 
+  select(-line, line)</code></pre>
+<pre><code>## Joining, by = c(&quot;speaker_number&quot;, &quot;speaker&quot;)</code></pre>
+<pre class="r"><code>trans_tidy_raw &lt;- trans_df %&gt;% 
+  unnest_tokens(word, line)
+
+trans_tidy &lt;- trans_tidy_raw %&gt;% 
+  anti_join(stop_words)</code></pre>
+<pre><code>## Joining, by = &quot;word&quot;</code></pre>
+</div>
+<div id="word-count" class="section level1">
+<h1>Word count</h1>
+<p>Here we count the number of words for each speaker.</p>
+<pre class="r"><code>trans_tidy_raw %&gt;% 
+  group_by(speaker_number, speaker) %&gt;% 
+  count() %&gt;% 
+  ggplot(aes(x = speaker_number, y = n, group = speaker, color = speaker)) +
+  geom_line() +
+  scale_color_viridis_d()</code></pre>
+<p><img src="/post/2018-09-30-tidy-text-analysis-of-brett-kavanaugh-s-testimony_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+<p>This isn’t too helpful. Grassley does have a lot of words, but that make sense because he is chairing the meeting.</p>
+</div>
+<div id="ford" class="section level1">
+<h1>Ford</h1>
+<p>It will be somewhat difficult to gauge Dr. Ford’s testimony by last speaker’s party, because the Republicans largely relied on a female sex crimes prosecutor to do their questioning.</p>
+<pre class="r"><code>trans_tidy %&gt;% 
+  filter(speaker == &quot;FORD&quot;) %&gt;% 
+  inner_join(get_sentiments(&quot;bing&quot;)) %&gt;% 
+  count(line_number, last_speaker_party, sentiment) %&gt;% 
+  spread(sentiment, n, fill = 0) %&gt;% 
+  mutate(sentiment = positive - negative) %&gt;% 
+  ggplot(aes(x = line_number, y = sentiment)) +
+  geom_line() +
+  geom_hline(yintercept = 0, linetype = &quot;dashed&quot;, color = gray(0.5)) +
+  geom_point(aes(color = last_speaker_party)) +
+  labs(x = &quot;\&quot;Time\&quot; (as given by line number)&quot;, y = &quot;Sentiment&quot;, color = &quot;Last Speaker\nParty&quot;)</code></pre>
+<pre><code>## Joining, by = &quot;word&quot;</code></pre>
+<p><img src="/post/2018-09-30-tidy-text-analysis-of-brett-kavanaugh-s-testimony_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
+<p>I’m not surprised that this analysis showed a lot of negative sentiment, but I am surprised that Dr. Ford for a large part kept her testimony within a tight window for sentiment. Notice the large amount of green - this indicates the last speaker was the “nonpartisan” staff counsel Rachel Mitchell.</p>
+<div id="words-in-general" class="section level2">
+<h2>Words in general</h2>
+<pre class="r"><code>trans_tidy %&gt;% 
+  filter(speaker == &quot;FORD&quot;) %&gt;% 
+  mutate(word = wordStem(word)) %&gt;% 
+  count(word) %&gt;% 
+  top_n(25, n) %&gt;% 
+  ggplot(aes(fct_reorder(word,n))) +
+  geom_bar(aes(weight = n)) +
+  labs(x = &quot;Stemmed word&quot;, y = &quot;Times used in Ford&#39;s testimony&quot;) +
+  coord_flip()</code></pre>
+<p><img src="/post/2018-09-30-tidy-text-analysis-of-brett-kavanaugh-s-testimony_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+<p>You can see several issues starting to emerge - “detail” is an important consideration as the #10 word, as well as words like “person”, “people”, “remember”, “mark”, and “assault”.</p>
+</div>
+<div id="words-by-party-of-last-speaker" class="section level2">
+<h2>Words by party of last speaker</h2>
+<pre class="r"><code>trans_tidy %&gt;% 
+  filter(speaker == &quot;FORD&quot;) %&gt;% 
+  mutate(word = wordStem(word)) %&gt;% 
+  count(word) %&gt;% 
+  top_n(25, n) -&gt; top_words
+
+trans_tidy %&gt;% 
+  filter(speaker == &quot;FORD&quot;, !is.na(last_speaker_party)) %&gt;% 
+  semi_join(top_words) %&gt;% # semi-join is a filtering join - keep only top words above
+  mutate(word = wordStem(word)) %&gt;% 
+  count(last_speaker_party, word) %&gt;% 
+  group_by(last_speaker_party) %&gt;% 
+  mutate(ord = rank(n, ties.method = &quot;random&quot;), 
+         ord_word = paste0(sprintf(&quot;%03d&quot;,ord), &quot;_&quot;, word)) %&gt;% # needed for ordering within facet
+  ungroup() %&gt;% 
+  ggplot(aes(ord_word, n)) +
+  geom_bar(stat = &quot;identity&quot;) +
+  labs(x = &quot;Stemmed word&quot;, y = &quot;Times used in Ford&#39;s testimony&quot;) +
+  coord_flip() +
+  facet_wrap(~ last_speaker_party, scales = &quot;free&quot;) +
+  scale_x_discrete(labels = function(x) str_remove(x,&quot;^\\d+_&quot;))</code></pre>
+<pre><code>## Joining, by = &quot;word&quot;</code></pre>
+<p><img src="/post/2018-09-30-tidy-text-analysis-of-brett-kavanaugh-s-testimony_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+<p>Here’s where we start to see quite a bit of difference in the language used to respond to the different parties. Dr. Ford used “detail” quite a bit after the staff counsel and Republicans but the word “correct” far and away the most often after the Democrats. There’s not a lot to gain from looking at the Witness facet in the graph, but do recall that indicates Dr. Ford’s lawyer.</p>
+</div>
+</div>
+<div id="kavanaugh" class="section level1">
+<h1>Kavanaugh</h1>
+<div id="sentiment-better-after-republicans" class="section level2">
+<h2>Sentiment better after Republicans?</h2>
+<p>First, let’s get a word count after Democrats and Republicans</p>
+<pre class="r"><code>trans_tidy_raw %&gt;% 
+  filter(speaker == &quot;KAVANAUGH&quot;) %&gt;% 
+  count(last_speaker_party)</code></pre>
+<pre><code>## # A tibble: 5 x 2
+##   last_speaker_party     n
+##   &lt;chr&gt;              &lt;int&gt;
+## 1 Democrat            4185
+## 2 Nonpartisan         1334
+## 3 Republican          6703
+## 4 Witness              149
+## 5 &lt;NA&gt;                 508</code></pre>
+<p>Not a lot too see here. I did not a lot of Republicans used their time to make their own statements about the hearing rather than ask questions (e.g. Lindsey Graham). Also, the count includes Judge Kavanaugh’s opening statment.</p>
+<p>Now do a sentiment analysis after Democrats and Republicans.</p>
+<pre class="r"><code>trans_tidy %&gt;% 
+  filter(speaker == &quot;KAVANAUGH&quot;) %&gt;% 
+  inner_join(get_sentiments(&quot;bing&quot;)) %&gt;% 
+  count(last_speaker_party, sentiment) %&gt;% 
+  spread(sentiment, n, fill = 0) %&gt;% 
+  mutate(sentiment = positive - negative)</code></pre>
+<pre><code>## Joining, by = &quot;word&quot;</code></pre>
+<pre><code>## # A tibble: 3 x 4
+##   last_speaker_party negative positive sentiment
+##   &lt;chr&gt;                 &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
+## 1 Democrat                 66       25       -41
+## 2 Nonpartisan              18        7       -11
+## 3 Republican              143      104       -39</code></pre>
+<p>Looks like he spoke negatively after each party, on average. This was expected, as he was under the gun.</p>
+</div>
+<div id="kavanaughs-sentiment-over-time" class="section level2">
+<h2>Kavanaugh’s sentiment over time</h2>
+<p>Judge Kavanaugh was a sour and combative guy. Let’s see how he fared over time, with <code>line_number</code> as a surrogate for time.</p>
+<pre class="r"><code>trans_tidy %&gt;% 
+  filter(speaker == &quot;KAVANAUGH&quot;) %&gt;% 
+  inner_join(get_sentiments(&quot;bing&quot;)) %&gt;% 
+  count(line_number, last_speaker_party, sentiment) %&gt;% 
+  spread(sentiment, n, fill = 0) %&gt;% 
+  mutate(sentiment = positive - negative) %&gt;% 
+  ggplot(aes(x = line_number, y = sentiment)) +
+  geom_line() +
+  geom_hline(yintercept = 0, linetype = &quot;dashed&quot;, color = gray(0.5)) +
+  geom_point(aes(color = last_speaker_party)) +
+  labs(x = &quot;\&quot;Time\&quot; (as given by line number)&quot;, y = &quot;Sentiment&quot;, color = &quot;Last Speaker\nParty&quot;)</code></pre>
+<pre><code>## Joining, by = &quot;word&quot;</code></pre>
+<p><img src="/post/2018-09-30-tidy-text-analysis-of-brett-kavanaugh-s-testimony_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
+<p>His opening statement (which included a lot of crying and angry statements) was on the balance negative, but he went all over the place. This is somewhat expected. During questioning, the sentiment content of words stayed within a tighter window for the most part.</p>
+</div>
+<div id="beer" class="section level2">
+<h2>Beer!</h2>
+<p>Let’s count the number of times he said beer, as this seemed to be an important part of the conversation.</p>
+<pre class="r"><code>trans_tidy %&gt;% 
+  filter(speaker == &quot;KAVANAUGH&quot;) %&gt;% 
+  filter(word %in% c(&quot;beer&quot;, &quot;beers&quot;)) %&gt;% # maybe should add &quot;ski&quot; here
+  count(last_speaker_party)</code></pre>
+<pre><code>## # A tibble: 3 x 2
+##   last_speaker_party     n
+##   &lt;chr&gt;              &lt;int&gt;
+## 1 Democrat              10
+## 2 Nonpartisan           24
+## 3 Republican            12</code></pre>
+<p>One thing that is important, that will be missed by this rather cursory analysis for certain, is the use of rare words like “boof” and “Devil’s triangle”. The public has contested the meanings Kavanaugh gave in his testimony, and this transcript isn’t going to yield much more insight. There are also words such as “ski” that have various meanings. The Urban Dictionary may be helpful in those analyses, but math certainly won’t be.</p>
+</div>
+<div id="words-in-general-1" class="section level2">
+<h2>Words in general</h2>
+<p>Here we will need to stem the words (so, for example, “beer” and “beers” are counted as the same word).</p>
+<pre class="r"><code>trans_tidy %&gt;% 
+  filter(speaker == &quot;KAVANAUGH&quot;) %&gt;% 
+  mutate(word = wordStem(word)) %&gt;% 
+  count(word) %&gt;% 
+  top_n(25, n) %&gt;% 
+  ggplot(aes(fct_reorder(word,n))) +
+  geom_bar(aes(weight = n)) +
+  labs(x = &quot;Stemmed word&quot;, y = &quot;Times used in Kavanaugh&#39;s testimony&quot;) +
+  coord_flip()</code></pre>
+<p><img src="/post/2018-09-30-tidy-text-analysis-of-brett-kavanaugh-s-testimony_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
+<p>Our favorite word, beer, is Number 10. (“ph” appears to be an indicator in the transcript of some unintelligible or filler sounds, so he did that a lot).</p>
+<p>Let’s see how he does in response to the different parties, but keep only the words above.</p>
+<pre class="r"><code>trans_tidy %&gt;% 
+  filter(speaker == &quot;KAVANAUGH&quot;) %&gt;% 
+  mutate(word = wordStem(word)) %&gt;% 
+  count(word) %&gt;% 
+  top_n(25, n) -&gt; top_words
+
+trans_tidy %&gt;% 
+  filter(speaker == &quot;KAVANAUGH&quot;, !is.na(last_speaker_party)) %&gt;% 
+  semi_join(top_words) %&gt;% # semi-join is a filtering join - keep only top words above
+  mutate(word = wordStem(word)) %&gt;% 
+  count(last_speaker_party, word) %&gt;% 
+  group_by(last_speaker_party) %&gt;% 
+  mutate(ord = rank(n, ties.method = &quot;random&quot;), 
+         ord_word = paste0(sprintf(&quot;%03d&quot;,ord), &quot;_&quot;, word)) %&gt;% # needed for ordering within facet
+  ungroup() %&gt;% 
+  ggplot(aes(ord_word, n)) +
+  geom_bar(stat = &quot;identity&quot;) +
+  labs(x = &quot;Stemmed word&quot;, y = &quot;Times used in Kavanaugh&#39;s testimony&quot;) +
+  coord_flip() +
+  facet_wrap(~ last_speaker_party, scales = &quot;free_x&quot;) +
+  scale_x_discrete(labels = function(x) str_remove(x,&quot;^\\d+_&quot;))</code></pre>
+<pre><code>## Joining, by = &quot;word&quot;</code></pre>
+<p><img src="/post/2018-09-30-tidy-text-analysis-of-brett-kavanaugh-s-testimony_files/figure-html/unnamed-chunk-13-1.png" width="672" /></p>
+<p>Nothing seems out of the ordinary for someone who is called to explain his beer consumption and attitudes/behavior toward women in school.</p>
+</div>
+</div>
+<div id="conclusion" class="section level1">
+<h1>Conclusion</h1>
+<p>There are of course a lot of limitations to this approach, such as whether Judge Kavanaugh adequately addressed questions directed at him and the tone and nonverbal cues given by both witnesses. However, this cursory analysis has already yielded some interesting details about how the two different witnesses, and hopefully the data cleaning instructions and code at the top can help you with your own analysis.</p>
+</div>

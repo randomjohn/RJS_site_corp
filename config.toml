@@ -37,9 +37,8 @@ paginatePath = "page"
 
     MathJaxCDN = "//cdn.bootcss.com"
     MathJaxVersion = "2.7.1"
-
-[params.disqus]    
-    site = "rjsds"
+    
+    disqusShortname = "rjsds"
 
 
 [[menu.main]]
@@ -52,7 +51,7 @@ paginatePath = "page"
     weight = 5
 
 [params.disqus]
-    site = "rjsds.disqus.com"
+    site = "rjsds"
 
 [params.sharethis]
     property = "123456789012345678901234"

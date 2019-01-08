@@ -39,9 +39,9 @@
 			<div class="col-sm-8 col-sm-offset-2">
 
 				<div id="comments">
-                    <!--{{ if .Params.Comments }}-->
+                    {{ if .Params.Comments }}
                        {{ partial "disqus.html" . }}
-                    <!--{{ end }}-->
+                    {{ end }}
 				</div>
 			</div>
 		</div> <!-- /row comments -->

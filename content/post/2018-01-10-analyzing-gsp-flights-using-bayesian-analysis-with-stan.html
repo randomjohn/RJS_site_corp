@@ -19,14 +19,14 @@ draft: no
 <p>This is a new series on Bayesian analysis using Stan, and, specifically, the R interface to Stan. Even if you don’t want to use the R interface to Stan, much of the actual Stan code may still apply to you, but for now you are on your own getting data into and back out.</p>
 <p>Bayesian analysis can be described in several different ways, all of which offer useful ways of thinking about problems. It requires a little bit of a paradigm shift if you are used to classical statistics or machine learning. For one thing, everything is assumed to be described by a random variable. For instance, if you are analyzing the height of all women in the world, we assume the height of any individual is random, but we also assume that the population average (a “parameter” or “unknown quantity” we might be trying to “estimate”) is also random. (Some frameworks, including classical statistics, would assume it fixed but ultimately unknowable.) The purpose of this series is to get some hands-on experience with Bayesian analysis and bring some of these theoretical ideas more concrete, so they can be used for practical, real-world cases.</p>
 <p>We’ll start simple and work our way to more complex cases over time. During this series, we’ll encounter some philosophical struggles, some more practical matters, and some computing issues that will make us try different approaches.</p>
-<p>One note: you can get help on <code>rstan</code> by using <code>help(&quot;rstan&quot;)</code> once you’ve loaded the package. For some reason, they seem to use partial pooling as the simplest example, and while partial pooling is important, it might be a little confusing while you are getting started. I get a lot simpler here.</p>
+<p>One note: you can get help on <code>rstan</code> by using <code>help("rstan")</code> once you’ve loaded the package. For some reason, they seem to use partial pooling as the simplest example, and while partial pooling is important, it might be a little confusing while you are getting started. I get a lot simpler here.</p>
 <!--more-->
 <p>In a <a href="/post/2017-09-24-flights-from-gsp/">previous post</a>, I analyzed the number of departing flights from the local Upstate airport GSP (Greenville-Spartanburg International). There were some interesting patterns in the data. I think it will serve as an interesting launch point for a new series on using the Stan package for Bayesian analysis.</p>
 </div>
 <div id="installation" class="section level1">
 <h1>Installation</h1>
 <p>First, you’ll need to install R, if you don’t have it. Head over to <a href="http://www.r-project.org" class="uri">http://www.r-project.org</a> if you don’t. I also install the Rstudio (<a href="http://www.rstudio.com" class="uri">http://www.rstudio.com</a>) IDE for R, because it has a lot of nice features (including integrating R code in blogging!).</p>
-<p>Once you have R, you will need to install the <code>rstan</code> package. (While you’re at it, pick up the <code>rstanarm</code> package as well, for later on.) For readability of data manipulation, I’ll use <code>dplyr</code> and related packages (collectively known as the “tidyverse”). Use <code>install.packages(c(&quot;rstan&quot;,&quot;rstanarm&quot;,&quot;tidyverse&quot;,&quot;lubridate&quot;))</code> to get these packages; all relevant dependencies will be installed. (I also use the <code>lubridate</code> package to manage some of the strange date formats – I understand it will be included in <code>tidyverse</code> at a later date). For more information on the tidyverse packages, go over to <a href="http://tidyverse.org" class="uri">http://tidyverse.org</a>, but after you’ve finished reading about Stan here :).</p>
+<p>Once you have R, you will need to install the <code>rstan</code> package. (While you’re at it, pick up the <code>rstanarm</code> package as well, for later on.) For readability of data manipulation, I’ll use <code>dplyr</code> and related packages (collectively known as the “tidyverse”). Use <code>install.packages(c("rstan","rstanarm","tidyverse","lubridate"))</code> to get these packages; all relevant dependencies will be installed. (I also use the <code>lubridate</code> package to manage some of the strange date formats – I understand it will be included in <code>tidyverse</code> at a later date). For more information on the tidyverse packages, go over to <a href="http://tidyverse.org" class="uri">http://tidyverse.org</a>, but after you’ve finished reading about Stan here :).</p>
 <p>And now we begin.</p>
 </div>
 <div id="setup-and-data" class="section level1">
@@ -160,15 +160,15 @@ save(mean_model_fit,file=&quot;mean_model_fit.RData&quot;)</code></pre>
 ## post-warmup draws per chain=1000, total post-warmup draws=4000.
 ## 
 ##          mean se_mean   sd    2.5%     25%     50%     75%   97.5% n_eff
-## mu      17.33    0.00 0.21   16.92   17.19   17.33   17.47   17.76  3309
-## sigma    3.91    0.00 0.16    3.62    3.80    3.90    4.02    4.22  3463
-## lp__  -623.17    0.03 1.05 -626.04 -623.54 -622.84 -622.42 -622.16  1760
+## mu      17.32    0.00 0.22   16.89   17.18   17.32   17.47   17.74  3415
+## sigma    3.91    0.00 0.15    3.63    3.80    3.90    4.00    4.21  3099
+## lp__  -623.14    0.03 1.03 -625.88 -623.52 -622.83 -622.42 -622.16  1694
 ##       Rhat
 ## mu       1
 ## sigma    1
 ## lp__     1
 ## 
-## Samples were drawn using NUTS(diag_e) at Sun Jun 03 12:45:34 2018.
+## Samples were drawn using NUTS(diag_e) at Mon Jan 07 20:34:41 2019.
 ## For each parameter, n_eff is a crude measure of effective sample size,
 ## and Rhat is the potential scale reduction factor on split chains (at 
 ## convergence, Rhat=1).</code></pre>

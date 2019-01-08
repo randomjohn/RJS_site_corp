@@ -26,7 +26,8 @@ paginatePath = "page"
     showRecentWorks = false
     showDownload = false
     showClients = false
-    comments = true
+    Comments = true
+    Share = true
     
     disable_highlight = true
     highlightjsVersion = "9.11.0"
@@ -36,6 +37,8 @@ paginatePath = "page"
 
     MathJaxCDN = "//cdn.bootcss.com"
     MathJaxVersion = "2.7.1"
+    
+    disqusShortname = "rjsds"
 
 
 [[menu.main]]
@@ -48,7 +51,7 @@ paginatePath = "page"
     weight = 5
 
 [params.disqus]
-    site = "randomjohn"
+    site = "rjsds.disqus.com"
 
 [params.sharethis]
     property = "123456789012345678901234"

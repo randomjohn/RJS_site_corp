@@ -33,9 +33,9 @@ fit</code></pre>
 ##  predictors:   10
 ## ------
 ##                        Median MAD_SD
-## (Intercept)             2.6    0.0  
+## (Intercept)             2.6    0.1  
 ## factor(quarter(date))2  0.4    0.0  
-## factor(quarter(date))3  0.3    0.0  
+## factor(quarter(date))3  0.2    0.1  
 ## factor(quarter(date))4  0.2    0.0  
 ## factor(wday(date))2     0.1    0.1  
 ## factor(wday(date))3     0.1    0.1  
@@ -43,14 +43,18 @@ fit</code></pre>
 ## factor(wday(date))5     0.1    0.1  
 ## factor(wday(date))6     0.1    0.1  
 ## factor(wday(date))7    -0.3    0.1  
-## reciprocal_dispersion  39.9    4.7  
+## 
+## Auxiliary parameter(s):
+##                       Median MAD_SD
+## reciprocal_dispersion 40.1    4.6  
 ## 
 ## Sample avg. posterior predictive distribution of y:
 ##          Median MAD_SD
 ## mean_PPD 17.3    0.4  
 ## 
 ## ------
-## For info on the priors used see help(&#39;prior_summary.stanreg&#39;).</code></pre>
+## * For help interpreting the printed output see ?print.stanreg
+## * For info on the priors used see ?prior_summary.stanreg</code></pre>
 <p>That is a lot of data manipulation and analysis fit onto one line! Here, instead of explicitly calculating the quarter and the weekday, we included it in the formula part of the <code>stan_glm.nb</code> line. The minor drawback is that the presentation of it looks a little funny, and we lost a little control over the reference class. Also notice this is on the log scale, as the parameters were in the last post. However, we can still review the relative effect sizes. We also specified priors as follows:</p>
 <ul>
 <li>Intercept prior: distribution with mean equal to our original guess (32, on the log scale) and a standard deviation high enough to cover all reasonable values (again, on the log scale)</li>

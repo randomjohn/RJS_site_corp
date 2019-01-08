@@ -72,9 +72,10 @@ trans_df &lt;- data_frame(raw = trans_raw) %&gt;%
          speaker_number = cumsum(speaker_change)) %&gt;% 
   filter(!(str_detect(speaker, &quot;CROSSTALK|CORRECTED|LAUGHTER|RECESS|GAVEL&quot;))) %&gt;% 
   mutate(party = names_party[speaker]) %&gt;% 
-  select(line_number, speaker_number, speaker, party, line)
-
-speakers_df &lt;- trans_df %&gt;% 
+  select(line_number, speaker_number, speaker, party, line)</code></pre>
+<pre><code>## Warning: `data_frame()` is deprecated, use `tibble()`.
+## This warning is displayed once per session.</code></pre>
+<pre class="r"><code>speakers_df &lt;- trans_df %&gt;% 
   group_by(speaker_number, speaker) %&gt;% 
   slice(1) %&gt;% 
   select(speaker_number, speaker) %&gt;% 

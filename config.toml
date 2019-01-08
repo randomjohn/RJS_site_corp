@@ -29,7 +29,7 @@ paginatePath = "page"
     Comments = true
     Share = true
     
-    disable_highlight = true
+    disable_highlight = false
     highlightjsVersion = "9.11.0"
     highlightjsCDN = "//cdn.bootcss.com"
     highlightjsLang = ["r", "yaml"]
@@ -51,7 +51,7 @@ paginatePath = "page"
     weight = 5
 
 [params.disqus]
-    site = "rjsds"
+    site = "rjsds.disqus.com"
 
 [params.sharethis]
     property = "123456789012345678901234"

@@ -27,7 +27,7 @@
 			<div class="col-sm-8 col-sm-offset-2">
 
 				<div id="share">
-                    {{ if .Params.Share }}
+                    {{ if .Site.Params.Share }}
                        {{ partial "sharethis.html" . }}
                     {{ end }}
 				</div>
@@ -39,7 +39,7 @@
 			<div class="col-sm-8 col-sm-offset-2">
 
 				<div id="comments">
-                    {{ if .Params.Comments }}
+                    {{ if .Site.Params.Comments }}
                        {{ partial "disqus.html" . }}
                     {{ end }}
 				</div>

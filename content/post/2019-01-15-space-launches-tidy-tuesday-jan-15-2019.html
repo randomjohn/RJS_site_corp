@@ -1,0 +1,423 @@
+---
+title: Space launches (Tidy Tuesday Jan 15, 2019)
+author: John
+date: '2019-01-15'
+slug: space-launches-tidy-tuesday-jan-15-2019
+categories:
+  - General
+tags:
+  - tidy tuesday
+---
+
+
+
+<div id="purpose" class="section level1">
+<h1>Purpose</h1>
+<p>This week’s Tidy Tuesday dataset, <a href="https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-01-15">Space launches</a> is also from <em>The Economist</em>. The article hypothesizes that the space race is dominated by “new contenders”. There are two data files, one describing space launch providers, and another describing individual launches. In this post I look at the number of launches by state, success, or both.</p>
+</div>
+<div id="setup-and-downloading-data" class="section level1">
+<h1>Setup and downloading data</h1>
+<pre class="r"><code>agencies &lt;- read_csv(&quot;https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-01-15/agencies.csv&quot;)
+launches &lt;- read_csv(&quot;https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-01-15/launches.csv&quot;)</code></pre>
+</div>
+<div id="initial-exploration" class="section level1">
+<h1>Initial exploration</h1>
+<div id="data-structure" class="section level2">
+<h2>Data structure</h2>
+<p>This is what the <code>agencies</code> dataset looks like.</p>
+<pre class="r"><code>head(agencies) </code></pre>
+<pre><code>## # A tibble: 6 x 19
+##   agency count ucode state_code type  class tstart tstop short_name name 
+##   &lt;chr&gt;  &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt;      &lt;chr&gt; &lt;chr&gt; &lt;chr&gt;  &lt;chr&gt; &lt;chr&gt;      &lt;chr&gt;
+## 1 RVSN    1528 RVSN  SU         O/LA  D     1960   1991~ RVSN       Rake~
+## 2 UNKS     904 GUKOS SU         O/LA  D     1986 ~ 1991  UNKS       Upra~
+## 3 NASA     469 NASA  US         O/LA~ C     1958 ~ -     NASA       Nati~
+## 4 USAF     388 USAF  US         O/LA~ D     1947 ~ -     USAF       Unit~
+## 5 AE       258 AE    F          O/LA  B     1980 ~ *     Arianespa~ Aria~
+## 6 AFSC     247 AFSC  US         LA    D     1961 ~ 1992~ AFSC       US A~
+## # ... with 9 more variables: location &lt;chr&gt;, longitude &lt;chr&gt;,
+## #   latitude &lt;chr&gt;, error &lt;chr&gt;, parent &lt;chr&gt;, short_english_name &lt;chr&gt;,
+## #   english_name &lt;chr&gt;, unicode_name &lt;chr&gt;, agency_type &lt;chr&gt;</code></pre>
+<p>This appears to be one dataset per agency that has participated in a launch.</p>
+<p>My best guess for state codes:</p>
+<ul>
+<li>RU = Russia</li>
+<li>SU = Soviet Union</li>
+<li>US = United States</li>
+<li>F = France</li>
+<li>CN = China</li>
+<li>IN = India</li>
+<li>J = Japan</li>
+<li>I-ESA = European Space Agency</li>
+<li>IL = Israel</li>
+<li>I = Italy</li>
+<li>IR = Iran</li>
+<li>KP = North Korea</li>
+<li>CYM = Cayman Islands</li>
+<li>I-ELDO = Predecessor to ESA</li>
+<li>KR = Korea</li>
+<li>BR = Brazil</li>
+<li>UK = United Kingdom</li>
+</ul>
+<p>Later on, we might combine SU and RU into one country, because the Soviet Union effectively changed into Russia for purposes here (I acknowledge the geopolitics is more complicated). The European Space Agency is a successor to the European Launch Development Organization, so it makes sense to combine I-ESA and I-ELDO as well.</p>
+<p>And this is the <code>launches</code> dataset:</p>
+<pre class="r"><code>head(launches) </code></pre>
+<pre><code>## # A tibble: 6 x 11
+##   tag       JD launch_date launch_year type  variant mission agency
+##   &lt;chr&gt;  &lt;dbl&gt; &lt;date&gt;            &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt;   &lt;chr&gt;   &lt;chr&gt; 
+## 1 1967~ 2.44e6 1967-06-29         1967 Thor~ &lt;NA&gt;    Secor ~ US    
+## 2 1967~ 2.44e6 1967-08-23         1967 Thor~ &lt;NA&gt;    DAPP 3~ US    
+## 3 1967~ 2.44e6 1967-10-11         1967 Thor~ &lt;NA&gt;    DAPP 4~ US    
+## 4 1968~ 2.44e6 1968-05-23         1968 Thor~ &lt;NA&gt;    DAPP 5~ US    
+## 5 1968~ 2.44e6 1968-10-23         1968 Thor~ &lt;NA&gt;    DAPP 6~ US    
+## 6 1969~ 2.44e6 1969-07-23         1969 Thor~ &lt;NA&gt;    DAPP 7~ US    
+## # ... with 3 more variables: state_code &lt;chr&gt;, category &lt;chr&gt;,
+## #   agency_type &lt;chr&gt;</code></pre>
+<p>This appears to be one dataset per launch.</p>
+</div>
+<div id="checking" class="section level2">
+<h2>Checking</h2>
+</div>
+</div>
+<div id="analysis-of-launches" class="section level1">
+<h1>Analysis of launches</h1>
+<div id="by-state" class="section level2">
+<h2>By state</h2>
+<p>Number of launches by state:</p>
+<pre class="r"><code>launches %&gt;% 
+  count(state_code, sort = TRUE)</code></pre>
+<pre><code>## # A tibble: 17 x 2
+##    state_code     n
+##    &lt;chr&gt;      &lt;int&gt;
+##  1 SU          2444
+##  2 US          1716
+##  3 RU           734
+##  4 CN           302
+##  5 F            291
+##  6 J            115
+##  7 IN            65
+##  8 I-ESA         13
+##  9 IL            10
+## 10 I              9
+## 11 IR             8
+## 12 KP             5
+## 13 CYM            4
+## 14 I-ELDO         3
+## 15 KR             3
+## 16 BR             2
+## 17 UK             2</code></pre>
+<p>Launches by state and year:</p>
+<pre class="r"><code>launches %&gt;% 
+  count(state_code, launch_year) %&gt;% 
+  ggplot(aes(launch_year, n, group=state_code, color = state_code)) +
+  geom_line() +
+  labs(y = &quot;Number of launches&quot;, x = &quot;Year&quot;) +
+  scale_color_discrete()</code></pre>
+<p><img src="/post/2019-01-15-space-launches-tidy-tuesday-jan-15-2019_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+<p>Observation: the Soviet Union and Russian programs appear to be a continuation of the same program, as evidenced by the break but same trend in the early 1990s between SU and RU. So in subsequent analyses we’ll combine SU and RU into RU.</p>
+<p>Here we model the launches by state using a Poisson generalized linear model (GLM). In addition to the Russia combining, I combine European State Agency and ELDO, which are also continuations of the same agency, more or less.</p>
+<pre class="r"><code>launches %&gt;% 
+  mutate(state_code = ifelse(state_code == &quot;SU&quot;, &quot;RU&quot;, state_code),
+         state_code = ifelse(state_code %in% c(&quot;I-ESA&quot;, &quot;I-ELDO&quot;), &quot;EU&quot;, state_code),
+         launch_year_norm = launch_year - 1957) %&gt;% 
+  count(launch_year_norm, state_code) %&gt;% 
+  filter(state_code %in% c(&quot;US&quot;, &quot;RU&quot;, &quot;CN&quot;, &quot;EU&quot;, &quot;J&quot;)) %&gt;% 
+  ungroup() -&gt;
+  launch_stcl
+
+newdat &lt;- crossing(launch_year_norm = unique(launch_stcl$launch_year_norm), 
+                   state_code = unique(launch_stcl$state_code))
+
+launch_stcl %&gt;% 
+  glm(n ~ launch_year_norm * state_code, family = &quot;poisson&quot;, data = .) -&gt;
+  mod
+
+mod %&gt;% 
+  augment(newdata = newdat, type.predict = &quot;response&quot;) %&gt;% 
+  mutate(launch_year = launch_year_norm + 1957) %&gt;% 
+  ggplot(aes(launch_year, .fitted, group = state_code, color = state_code)) +
+  geom_line() +
+  labs(y = &quot;Fitted number of launches&quot;, x = &quot;Launch year&quot;, color = &quot;State&quot;)</code></pre>
+<p><img src="/post/2019-01-15-space-launches-tidy-tuesday-jan-15-2019_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
+<p>Doesn’t really give a lot (and again, modeled values have to be treated with a grain of salt but are otherwise ok for suggesting trends), but the US and Soviet Union did a lot of launches in the 60s-70s while other countries only dabbled their toes.</p>
+</div>
+<div id="private-or-startup-vs.-state" class="section level2">
+<h2>Private or startup vs. state</h2>
+<p>Here we calculate the overall percentage of state-sponsored launches (as opposed to commercial launches)by year and graph. We combine “private” and “startup” into one group for now.</p>
+<pre class="r"><code>launches %&gt;% 
+  mutate(is_state = ifelse(agency_type == &quot;state&quot;, &quot;Yes&quot;, &quot;No&quot;)) %&gt;% 
+  count(launch_year, is_state) %&gt;% 
+  group_by(launch_year) %&gt;% 
+  mutate(percentage = n / sum(n)) %&gt;% 
+  filter(is_state == &quot;Yes&quot;) %&gt;% 
+  ggplot(aes(launch_year, percentage)) +
+  geom_line() + 
+  geom_point() +
+  expand_limits(y = c(0, NA)) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(y = &quot;Launched by state&quot;, x = &quot;Launch year&quot;, color = &quot;State&quot;)</code></pre>
+<p><img src="/post/2019-01-15-space-launches-tidy-tuesday-jan-15-2019_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+<p>As <em>The Economist</em> noted, private launches really didn’t start until after the Challenger explosion in 1986. Since then, commercial enterprises have been pushing more into the space launch space.</p>
+</div>
+<div id="private-vs.-startup-vs.-state" class="section level2">
+<h2>Private vs. startup vs. state</h2>
+<p>Here we look at all three categories. In addition, we use an area graph because we are showing relative percentages.</p>
+<pre class="r"><code>launches %&gt;% 
+  count(launch_year, agency_type) %&gt;% 
+  group_by(launch_year) %&gt;% 
+  mutate(percentage = n / sum(n)) %&gt;% 
+  ggplot(aes(launch_year, percentage, group = agency_type, fill = agency_type)) +
+  geom_area() + 
+  expand_limits(y = c(0, NA)) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(x = &quot;Launch year&quot;, y = &quot;Percentages of launches&quot;, fill = &quot;Agency type&quot;)</code></pre>
+<p><img src="/post/2019-01-15-space-launches-tidy-tuesday-jan-15-2019_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+<p>The startup phenomenon is fairly recent, but has really taken off. (Pun intended.)</p>
+<p>Whether it is worth exploring startups further depends on where they are:</p>
+<pre class="r"><code>launches %&gt;% 
+  mutate(state_code = ifelse(state_code == &quot;SU&quot;, &quot;RU&quot;, state_code),
+         state_code = ifelse(state_code %in% c(&quot;I-ESA&quot;, &quot;I-ELDO&quot;), &quot;EU&quot;, state_code)) %&gt;% 
+  filter(agency_type == &quot;startup&quot;) </code></pre>
+<pre><code>## # A tibble: 70 x 11
+##    tag       JD launch_date launch_year type  variant mission agency
+##    &lt;chr&gt;  &lt;dbl&gt; &lt;date&gt;            &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt;   &lt;chr&gt;   &lt;chr&gt; 
+##  1 2018~ 2.46e6 2018-01-21         2018 Elec~ &lt;NA&gt;    Dove/L~ RLABU 
+##  2 2017~ 2.46e6 2017-05-25         2017 Elec~ &lt;NA&gt;    &lt;NA&gt;    RLABU 
+##  3 2008~ 2.45e6 2008-09-28         2008 Falc~ &lt;NA&gt;    Mass s~ SPX   
+##  4 2009~ 2.46e6 2009-07-14         2009 Falc~ &lt;NA&gt;    MACSat  SPX   
+##  5 2010~ 2.46e6 2010-06-04         2010 Falc~ &lt;NA&gt;    Dragon~ SPX   
+##  6 2010~ 2.46e6 2010-12-08         2010 Falc~ &lt;NA&gt;    Dragon~ SPX   
+##  7 2012~ 2.46e6 2012-05-22         2012 Falc~ &lt;NA&gt;    Dragon~ SPX   
+##  8 2012~ 2.46e6 2012-10-08         2012 Falc~ &lt;NA&gt;    Dragon~ SPX   
+##  9 2013~ 2.46e6 2013-03-01         2013 Falc~ &lt;NA&gt;    Dragon~ SPX   
+## 10 2013~ 2.46e6 2013-09-29         2013 Falc~ 1.1     Cassio~ SPX   
+## # ... with 60 more rows, and 3 more variables: state_code &lt;chr&gt;,
+## #   category &lt;chr&gt;, agency_type &lt;chr&gt;</code></pre>
+<p>These are all in the US, so when we analyze startup trends later we’ll have to look at the US only and restrict interpretation. The number of startup launches per year is as follows:</p>
+<pre class="r"><code>launches %&gt;% 
+  mutate(state_code = ifelse(state_code == &quot;SU&quot;, &quot;RU&quot;, state_code),
+         state_code = ifelse(state_code %in% c(&quot;I-ESA&quot;, &quot;I-ELDO&quot;), &quot;EU&quot;, state_code)) %&gt;% 
+  filter(agency_type == &quot;startup&quot;) %&gt;% 
+  count(launch_year) %&gt;% 
+  kable()</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="right">launch_year</th>
+<th align="right">n</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">2006</td>
+<td align="right">1</td>
+</tr>
+<tr class="even">
+<td align="right">2007</td>
+<td align="right">1</td>
+</tr>
+<tr class="odd">
+<td align="right">2008</td>
+<td align="right">2</td>
+</tr>
+<tr class="even">
+<td align="right">2009</td>
+<td align="right">1</td>
+</tr>
+<tr class="odd">
+<td align="right">2010</td>
+<td align="right">2</td>
+</tr>
+<tr class="even">
+<td align="right">2012</td>
+<td align="right">2</td>
+</tr>
+<tr class="odd">
+<td align="right">2013</td>
+<td align="right">3</td>
+</tr>
+<tr class="even">
+<td align="right">2014</td>
+<td align="right">6</td>
+</tr>
+<tr class="odd">
+<td align="right">2015</td>
+<td align="right">7</td>
+</tr>
+<tr class="even">
+<td align="right">2016</td>
+<td align="right">8</td>
+</tr>
+<tr class="odd">
+<td align="right">2017</td>
+<td align="right">19</td>
+</tr>
+<tr class="even">
+<td align="right">2018</td>
+<td align="right">18</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="private-vs.-state-by-state" class="section level2">
+<h2>Private vs. state by state</h2>
+<p>Some data manipulation here. We again group private and startup launches and compare to state launches (and count startups as part of the private sector).</p>
+<pre class="r"><code>launches %&gt;% 
+  mutate(is_state = ifelse(agency_type == &quot;state&quot;, &quot;Yes&quot;, &quot;No&quot;),
+         state_code = ifelse(state_code == &quot;SU&quot;, &quot;RU&quot;, state_code),
+         state_code = ifelse(state_code %in% c(&quot;I-ESA&quot;, &quot;I-ELDO&quot;), &quot;EU&quot;, state_code)) %&gt;% 
+  count(launch_year, state_code, is_state) %&gt;% 
+  group_by(launch_year, state_code) %&gt;% 
+  mutate(percentage = n / sum(n)) %&gt;% 
+  ungroup() %&gt;% 
+  filter(is_state == &quot;Yes&quot;, state_code %in% c(&quot;US&quot;, &quot;RU&quot;, &quot;J&quot;, &quot;EU&quot;)) %&gt;% 
+  ggplot(aes(launch_year, percentage, group = state_code, color = state_code)) +
+  geom_line() + expand_limits(y = c(0, NA)) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(y = &quot;Launched by state&quot;, x = &quot;Launch year&quot;, color = &quot;State&quot;)</code></pre>
+<p><img src="/post/2019-01-15-space-launches-tidy-tuesday-jan-15-2019_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
+<p>I played around with this a bit, and it looks like all other states use exclusively state-sponsored launches.</p>
+<pre class="r"><code>launches %&gt;% 
+  mutate(is_state = ifelse(agency_type == &quot;state&quot;, &quot;Yes&quot;, &quot;No&quot;),
+         state_code = ifelse(state_code == &quot;SU&quot;, &quot;RU&quot;, state_code),
+         state_code = ifelse(state_code %in% c(&quot;I-ESA&quot;, &quot;I-ELDO&quot;), &quot;EU&quot;, state_code)) %&gt;% 
+  filter(state_code %in% c(&quot;US&quot;, &quot;RU&quot;, &quot;EU&quot;, &quot;J&quot;, &quot;CN&quot;, &quot;IN&quot;)) -&gt;
+  launches_state
+
+newdat &lt;- crossing(launch_year = unique(launches_state$launch_year), 
+                   state_code = unique(launches_state$state_code))
+
+launches_state %&gt;% 
+  glm(agency_type == &quot;state&quot; ~ launch_year * state_code, family = &quot;binomial&quot;, data = .) -&gt;
+  mod
+
+mod %&gt;% 
+  augment(newdata = newdat, type.predict = &quot;response&quot;) %&gt;% 
+  ggplot(aes(launch_year, .fitted, group = state_code, color = state_code)) +
+  geom_line() +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  labs(y = &quot;Probability of state launch&quot;, x = &quot;Launch year&quot;, color = &quot;State&quot;)</code></pre>
+<p><img src="/post/2019-01-15-space-launches-tidy-tuesday-jan-15-2019_files/figure-html/unnamed-chunk-11-1.png" width="672" /></p>
+<p>While you’ll have to take the modeled values with a grain of salt, it is interesting to see the trends for each state. The US and Japan are increasing reliance on commercial launches, and Russia is starting to as well. Other countries rely exclusively on state launches.</p>
+</div>
+<div id="launch-success" class="section level2">
+<h2>Launch success</h2>
+<p>The following is the overall launch success.</p>
+<pre class="r"><code>launches %&gt;% 
+  count(launch_year, category) %&gt;% 
+  group_by(launch_year) %&gt;% 
+  mutate(percentage = n / sum(n)) %&gt;% 
+  filter(category == &quot;O&quot;) %&gt;% 
+  ggplot(aes(launch_year, percentage)) +
+  geom_line() + expand_limits(y = c(0, NA)) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(y = &quot;Success rate&quot;, x = &quot;Launch year&quot;)</code></pre>
+<p><img src="/post/2019-01-15-space-launches-tidy-tuesday-jan-15-2019_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
+<p>The 1950s and 1960s were a time for developing technology. By 1969 we had put a man on the moon. We kept refining the technology to have a high launch success rate (high-profile failures, such as the Challenger, notwithstanding).</p>
+</div>
+<div id="launch-success-by-state" class="section level2">
+<h2>Launch success by state</h2>
+<p>Here we look at each state’s journey to perfect space launch technology, at least through the singular metric of launch success. This is a bit noisy, and a lot of countries only have a few launches.</p>
+<pre class="r"><code>launches %&gt;% 
+  mutate(is_state = ifelse(agency_type == &quot;state&quot;, &quot;Yes&quot;, &quot;No&quot;),
+         state_code = ifelse(state_code == &quot;SU&quot;, &quot;RU&quot;, state_code),
+         state_code = ifelse(state_code %in% c(&quot;I-ESA&quot;, &quot;I-ELDO&quot;), &quot;EU&quot;, state_code)) %&gt;% 
+  count(launch_year, state_code, category) %&gt;% 
+  group_by(launch_year, state_code) %&gt;% 
+  mutate(percentage = n / sum(n)) %&gt;% 
+  ungroup() %&gt;% 
+  filter(category == &quot;O&quot;, state_code %in% c(&quot;US&quot;, &quot;RU&quot;, &quot;EU&quot;, &quot;J&quot;, &quot;CN&quot;, &quot;IN&quot;)) %&gt;%
+  # filter(category == &quot;O&quot;, state_code %in% c(&quot;EU&quot;)) %&gt;% 
+  ggplot(aes(launch_year, percentage, group = state_code, color = state_code)) +
+  geom_line() + expand_limits(y = c(0, NA)) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(y = &quot;Launch success&quot;, x = &quot;Launch year&quot;, color = &quot;State&quot;)</code></pre>
+<p><img src="/post/2019-01-15-space-launches-tidy-tuesday-jan-15-2019_files/figure-html/unnamed-chunk-13-1.png" width="672" /></p>
+<p>Most years after 1970 showed high success rates, with “off” years for some states (which probably had few launches). We model this to try to tease out some signal or trend from the noise:</p>
+<pre class="r"><code>launches %&gt;% 
+  mutate(is_state = ifelse(agency_type == &quot;state&quot;, &quot;Yes&quot;, &quot;No&quot;),
+         state_code = ifelse(state_code == &quot;SU&quot;, &quot;RU&quot;, state_code),
+         state_code = ifelse(state_code %in% c(&quot;I-ESA&quot;, &quot;I-ELDO&quot;), &quot;EU&quot;, state_code)) %&gt;% 
+  filter(state_code %in% c(&quot;US&quot;, &quot;RU&quot;, &quot;EU&quot;, &quot;J&quot;, &quot;CN&quot;, &quot;IN&quot;)) -&gt;
+  launches_success
+
+newdat &lt;- crossing(launch_year = unique(launches_success$launch_year), 
+                   state_code = unique(launches_success$state_code))
+
+launches_success %&gt;% 
+  glm(category == &quot;O&quot; ~ launch_year * state_code, family = &quot;binomial&quot;, data = .) -&gt;
+  mod
+
+mod %&gt;% 
+  augment(newdata = newdat, type.predict = &quot;response&quot;) %&gt;% 
+  ggplot(aes(launch_year, .fitted, group = state_code, color = state_code)) +
+  geom_line() +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  labs(y = &quot;Probability of successful launch&quot;, x = &quot;Launch year&quot;, color = &quot;State&quot;) +
+  labs(caption = &quot;Note: model for IN and EU is suspect&quot;)</code></pre>
+<p><img src="/post/2019-01-15-space-launches-tidy-tuesday-jan-15-2019_files/figure-html/unnamed-chunk-14-1.png" width="672" /></p>
+<p>So, before, say, 1970, it only makes sense for Russia and the US to have success rates. The trend lines for India and the EU are suspect. (I think India was dragged down by an outlier, and the model wasn’t very good for the EU due to the consistently high success rates. In addition, the data isn’t very robust for these two states.) Always compare the fitted or smoothed graphs to the raw. I added a caveat into the visualization.</p>
+</div>
+<div id="launch-agencies-in-the-us" class="section level2">
+<h2>Launch agencies in the US</h2>
+<p>Because the US is starting to rely on startups, it is worth exploring success rates by agency. We start with the agencies themselves.</p>
+<pre class="r"><code>launches %&gt;% 
+  mutate(is_state = ifelse(agency_type == &quot;state&quot;, &quot;Yes&quot;, &quot;No&quot;)) %&gt;% 
+  filter(state_code == &quot;US&quot;) %&gt;% 
+  count(launch_year, agency) %&gt;% 
+  left_join(agencies %&gt;% select(agency,name) %&gt;% bind_rows(tibble(agency = &quot;US&quot;, name = &quot;US&quot;))) %&gt;% 
+  mutate(name = if_else(str_detect(name, &quot;Boeing&quot;), &quot;Boeing&quot;, name),
+         name = if_else(str_detect(name, &quot;Lockheed&quot;), &quot;Lockheed&quot;, name),
+         name = if_else(str_detect(name, &quot;Orbital&quot;), &quot;Orbital&quot;, name),
+         name = if_else(str_detect(name, &quot;Martin Marietta&quot;), &quot;Martin Marietta&quot;, name),
+         name = if_else(str_detect(name, &quot;McDonnell Douglas&quot;), &quot;McDonnell Douglas&quot;, name),
+         name = if_else(str_detect(name, &quot;General Dynamics&quot;), &quot;General Dynamics&quot;, name),
+         name = str_sub(name,1,10)) %&gt;% 
+  group_by(launch_year) %&gt;% 
+  mutate(percentage = n / sum(n)) %&gt;% 
+  ungroup() %&gt;% 
+  ggplot(aes(launch_year, percentage, group = name, fill = name)) +
+  geom_area() + expand_limits(y = c(0, NA)) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  scale_fill_viridis_d() +
+  labs(y = &quot;Percentage of launches&quot;, x = &quot;Launch year&quot;, fill = &quot;Agency&quot;)</code></pre>
+<pre><code>## Joining, by = &quot;agency&quot;</code></pre>
+<p><img src="/post/2019-01-15-space-launches-tidy-tuesday-jan-15-2019_files/figure-html/unnamed-chunk-15-1.png" width="672" /></p>
+<p>To try to cut down on noise, I tried to combine similar agencies, and finally cut the names short because that little bit of ugliness was preferable to a squished graph. A couple of things jump out:</p>
+<ul>
+<li>The US launches have basically gone to 0</li>
+<li>Boeing and Lockheed have been mainstays in the space launch area since the late 80s</li>
+<li>SpaceX has really been aggressive in space launches in the last couple of years (no surprise)</li>
+</ul>
+<p>Now, for how successful they are:</p>
+<pre class="r"><code>launches %&gt;% 
+  mutate(is_state = ifelse(agency_type == &quot;state&quot;, &quot;Yes&quot;, &quot;No&quot;)) %&gt;% 
+  filter(state_code == &quot;US&quot;) %&gt;% 
+  left_join(agencies %&gt;% select(agency,name) %&gt;% bind_rows(tibble(agency = &quot;US&quot;, name = &quot;US&quot;))) %&gt;% 
+  mutate(name = if_else(str_detect(name, &quot;Boeing&quot;), &quot;Boeing&quot;, name),
+         name = if_else(str_detect(name, &quot;Lockheed&quot;), &quot;Lockheed&quot;, name),
+         name = if_else(str_detect(name, &quot;Orbital&quot;), &quot;Orbital&quot;, name),
+         name = if_else(str_detect(name, &quot;Martin Marietta&quot;), &quot;Martin Marietta&quot;, name),
+         name = if_else(str_detect(name, &quot;McDonnell Douglas&quot;), &quot;McDonnell Douglas&quot;, name),
+         name = if_else(str_detect(name, &quot;General Dynamics&quot;), &quot;General Dynamics&quot;, name),
+         name = str_sub(name,1,10)) %&gt;% 
+  count(launch_year, name, category) %&gt;% 
+  group_by(launch_year, name) %&gt;% 
+  mutate(percentage = n / sum(n)) %&gt;% 
+  ungroup() %&gt;% 
+  filter(category == &quot;O&quot;) %&gt;%
+  ggplot(aes(launch_year, percentage, group = name, color = name)) +
+  geom_line() + expand_limits(y = c(0, NA)) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  scale_color_viridis_d() +
+  labs(y = &quot;Launch success&quot;, x = &quot;Launch year&quot;, color = &quot;Agency&quot;)</code></pre>
+<pre><code>## Joining, by = &quot;agency&quot;</code></pre>
+<p><img src="/post/2019-01-15-space-launches-tidy-tuesday-jan-15-2019_files/figure-html/unnamed-chunk-16-1.png" width="672" /></p>
+<p>Most agencies have had a high success rate, with the exception of the US before 1965 or 1970 (perfecting technology), Boeing and Lockheed early on, and the odd years when startups are trying new things. It’s probably not worth trying to smooth these out or model them, because the data are getting sparse.</p>
+<p>One word of warning. I don’t think the agencies dataset is entirely complete. This is data on what can be clandestine activities. Take this analysis with a grain of salt.</p>
+</div>
+</div>
+<div id="discussion" class="section level1">
+<h1>Discussion</h1>
+<p>It’s clear that the space race is dominated in the US by “new contenders”. This is especially true of the startups. There are also trends in Japan and Russia towards use of commercial launches, though not by startups. Old commercial mainstays, such as Boeing, remain in the launch business. Success in space launches has been high since the 1970s or even late 1960s, with a few exceptions. Some recent launch failures may be attributable to attempts at innovation in launch technology.</p>
+</div>

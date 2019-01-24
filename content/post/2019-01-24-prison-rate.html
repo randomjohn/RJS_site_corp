@@ -1,0 +1,66 @@
+---
+title: Prison rate
+author: John
+date: '2019-01-24'
+slug: prison-rate
+categories:
+  - General
+tags:
+  - tidy tuesday
+---
+
+
+
+<div id="purpose" class="section level1">
+<h1>Purpose</h1>
+<p>In continuing with Tidy Tuesday analysis, I do a very short post based on the prison rate dataset. Because time was short, I only did a couple of quick visualizations. There is a lot to this rich dataset, and this is only going to be a drop in the bucket. In fact, I don’t even download all of the files (for the purpose of this blog post). Really this was a chance to dip my toes in <code>ggplot2</code>’s <code>geom_sf</code>, which makes plotting maps a <em>lot</em> simpler than it used to me.</p>
+</div>
+<div id="setup" class="section level1">
+<h1>Setup</h1>
+<pre class="r"><code>library(tidyverse)
+library(tigris)
+library(gganimate)</code></pre>
+</div>
+<div id="get-data" class="section level1">
+<h1>Get data</h1>
+<p>Here I get data from two sources. First is the Tidy Tuesday website. The second is map geometry from the <code>tigris</code> package. The <code>tigris</code> package was updated some time ago to be compatible with the simple features <code>sf</code> package, making map plotting a lot smoother.</p>
+<pre class="r"><code>prison_pop &lt;- read_csv(&quot;https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-01-22/prison_population.csv&quot;)
+
+state_sf &lt;- states(class = &quot;sf&quot;)</code></pre>
+</div>
+<div id="munge-and-present-data" class="section level1">
+<h1>Munge and present data</h1>
+<p>The <code>prison_pop</code> dataset is at the county level, and, if I had wanted to, I could have merged it with the results of <code>states(class = "sf")</code> and produced a choropleth map that way. However, I aimed high and wanted to do an animated map. It takes a long time to do that, so I’ll summarize data at the state level. I’ll also produce a quick static map.</p>
+<pre class="r"><code>prison_pop %&gt;% 
+  group_by(year, state, pop_category) %&gt;% 
+  summarize(population = sum(population, na.rm = TRUE),
+            prison_population = sum(prison_population, na.rm = TRUE)) %&gt;% 
+  mutate(prison_rate = prison_population / population * 100000) %&gt;% 
+  ungroup() -&gt;
+  state_prison_pop
+
+
+state_sf %&gt;% 
+  left_join(state_prison_pop, by = c(&quot;STUSPS&quot; = &quot;state&quot;)) -&gt;
+  state_prison_map
+
+state_prison_map %&gt;% 
+  filter(year == 2000, pop_category == &quot;Total&quot;, !STUSPS %in% c(&quot;AK&quot;, &quot;HI&quot;)) %&gt;% 
+  ggplot() +
+  geom_sf(aes(fill = prison_rate)) +
+  labs(title = &quot;Prison rate for Year 2000&quot;)</code></pre>
+<p><img src="/post/2019-01-24-prison-rate_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
+<p>What I really want to do, and the crowning achievement of this post, is the above, but animated throughout all years. It’s pretty easy with the new version of the <code>gganimate</code> package. Here’s the code, though I’ve pre-rendered the file for this blog post. This takes a pretty long time even on my beefy system. I’ve also cut out our compatriots to the northwest and southwest, and at some point I might try learning the inset tricks.</p>
+<pre class="r"><code>state_prison_map %&gt;% 
+  filter(pop_category == &quot;Total&quot;, !STUSPS %in% c(&quot;AK&quot;, &quot;HI&quot;))  %&gt;% 
+  ggplot() +
+  geom_sf(aes(fill = prison_rate)) +
+  transition_time(as.integer(year)) +
+  labs(title = &quot;Year: {frame_time}&quot;) +
+  theme_void()</code></pre>
+<div class="figure">
+<img src="/post/2019-01-24-prison-rate_files/prison_rate.gif" alt="Prison rates through the years by state" />
+<p class="caption">Prison rates through the years by state</p>
+</div>
+<p>That’s it for now. Short and sweet.</p>
+</div>

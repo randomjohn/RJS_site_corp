@@ -69,6 +69,6 @@ state_prison_map %>%
   theme_void()
 ```
 
-![Prison rates through the years by state](/post/2019-01-24-prison-rate_files/prison_rate.gif)
+![Prison rates through the years by state](/images/prison_rate.gif)
 
 That's it for now. Short and sweet. 

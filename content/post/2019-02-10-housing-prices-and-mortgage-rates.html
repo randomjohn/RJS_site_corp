@@ -1,0 +1,337 @@
+---
+title: Housing prices and mortgage rates
+author: John
+date: '2019-02-10'
+slug: housing-prices-and-mortgage-rates
+categories:
+  - General
+tags:
+  - tidy tuesday
+---
+
+
+
+<div id="purpose" class="section level1">
+<h1>Purpose</h1>
+<p>This Tidy Tuesday looks at housing prices.
+<a href="https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-02-05" class="uri">https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-02-05</a></p>
+</div>
+<div id="setup" class="section level1">
+<h1>Setup</h1>
+</div>
+<div id="get-data" class="section level1">
+<h1>Get data</h1>
+<pre class="r"><code>state_hpi &lt;- readr::read_csv(&quot;https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-02-05/state_hpi.csv&quot;)</code></pre>
+<pre><code>## Parsed with column specification:
+## cols(
+##   year = col_double(),
+##   month = col_double(),
+##   state = col_character(),
+##   price_index = col_double(),
+##   us_avg = col_double()
+## )</code></pre>
+<pre class="r"><code>mortgage_rates &lt;- readr::read_csv(&quot;https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-02-05/mortgage.csv&quot;, col_types = &quot;Ddddddddd&quot;)</code></pre>
+<p>Recession dates from the Wikipedia article. I downloaded the data from the Tidy Tuesday page, but I couldn’t do a lot with it. So I took the code from the SPOILERS section of the page and modifed it. Mostly, I added the <code>tidyr::extract</code> code so I could determine the year and month of the starts and ends of the recessions, and then converted them to dates. It will make a nice underlay on the time series plots.</p>
+<pre class="r"><code>url &lt;- &quot;https://en.wikipedia.org/wiki/List_of_recessions_in_the_United_States&quot;
+
+df3 &lt;- url %&gt;% 
+  read_html() %&gt;% 
+  html_table() %&gt;% 
+  .[[3]] %&gt;% 
+  janitor::clean_names()
+
+recession_dates &lt;- df3 %&gt;% 
+  mutate(duration_months = substring(duration_months, 3),
+         period_range = substring(period_range, 5),
+         time_since_previous_recession_months = substring(time_since_previous_recession_months, 4),
+         peak_unemploy_ment = substring(peak_unemploy_ment, 5),
+         gdp_decline_peak_to_trough = substring(gdp_decline_peak_to_trough, 5),
+         period_range = case_when(name == &quot;Great Depression&quot; ~ &quot;Aug 1929-Mar 1933&quot;,
+                                  name == &quot;Great Recession&quot; ~ &quot;Dec 2007-June 2009&quot;,
+                                  TRUE ~ period_range)) %&gt;% 
+  tidyr::extract(period_range, c(&quot;from_c&quot;,&quot;to_c&quot;), &quot;([[^-]]+)-([[^-]]+)&quot;) %&gt;% 
+  mutate(from = as.Date(parse_date_time(from_c, &quot;%b %Y&quot;)), 
+         to = as.Date(parse_date_time(to_c, &quot;%b %Y&quot;)))</code></pre>
+</div>
+<div id="munging-data" class="section level1">
+<h1>Munging data</h1>
+<p>First we look a the housing price index:
+&gt; The House Price Index (HPI) is a broad measure of the movement of single-family house prices. The HPI is a weighted, repeat-sales index, meaning that it measures average price changes in repeat sales or refinancings on the same properties. This information is obtained by reviewing repeat mortgage transactions on single-family properties whose mortgages have been purchased or securitized by Fannie Mae or Freddie Mac since January 1975. - Quote from Federal Housing Finance Agency</p>
+<p>This HPI is scaled so that each state has 100 in Dec 2000. So each data point is the percent of the Dec 2000 price in that state. If you visualize this, there is a nexus at Dec 2000 that I find undesirable, although analysis can still occur with it. So I do a price reindex by dividing by the first (Jan 1975) HPI, so that we start off at 100. Then the reindex is just the percent of the first data point. It makes the graphs look better, and is mathematically equivalent.</p>
+<pre class="r"><code>state_hpi %&gt;% 
+  mutate(date = ymd(year*1e4 + month*1e2 + 1)) %&gt;% 
+  group_by(state) %&gt;% 
+  mutate(price_reindex = price_index / price_index[1] * 100, us_reavg = us_avg / us_avg[1] * 100) %&gt;% 
+  ungroup() -&gt;
+  state_hpi</code></pre>
+</div>
+<div id="hpi" class="section level1">
+<h1>HPI</h1>
+<p>Here are the housing price indexes for each state. There’s a peculiar superlative since 2000 with DC.</p>
+<pre class="r"><code>state_hpi %&gt;% 
+  ggplot() +
+  geom_line(aes(date,price_reindex / us_reavg, group = state, color = state)) +
+  geom_rect(aes(xmin = from, xmax = to, ymin = -Inf, ymax = Inf), alpha = 0.25, fill = &quot;black&quot;, 
+            data = recession_dates) +
+  xlim(ymd(19750101), NA) +
+  ylab(&quot;HPI / US avg HPI\nreindexed to Jan 1975 = 100&quot;)</code></pre>
+<pre><code>## Warning: Removed 9 rows containing missing values (geom_rect).</code></pre>
+<p><img src="/post/2019-02-10-housing-prices-and-mortgage-rates_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+<div id="highest-hpi-by-year-and-month" class="section level2">
+<h2>Highest HPI by year and month</h2>
+<p>This is to confirm the state with the maximum for each time point. Keep in mind this is not raw housing prices (where we would need a cost of living index), but rather growth in prices relative to a given point in time (doesn’t matter when, I just use the Dec 2000 date here). In the late nineties HI had a bubble in housing, which settled back down. Since 2000, DC has experienced huge increase in housing pricing relative to the rest the country.</p>
+<pre class="r"><code>state_hpi %&gt;% 
+  group_by(year,month) %&gt;% 
+  top_n(1, price_index) %&gt;% 
+  ungroup() %&gt;% 
+  arrange(year, month)</code></pre>
+<pre><code>## # A tibble: 577 x 8
+##     year month state price_index us_avg date       price_reindex us_reavg
+##    &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;       &lt;dbl&gt;  &lt;dbl&gt; &lt;date&gt;             &lt;dbl&gt;    &lt;dbl&gt;
+##  1  1975     1 MS           42.7   23.5 1975-01-01         100       100 
+##  2  1975     2 MS           42.3   23.6 1975-02-01          98.9     101.
+##  3  1975     3 WV           42.7   23.8 1975-03-01         105.      102.
+##  4  1975     4 WV           43.7   24.1 1975-04-01         107.      103.
+##  5  1975     5 WV           44.8   24.2 1975-05-01         110.      103.
+##  6  1975     6 WV           45.8   24.2 1975-06-01         113.      103.
+##  7  1975     7 WV           46.8   24.3 1975-07-01         115.      103.
+##  8  1975     8 WV           47.7   24.4 1975-08-01         117.      104.
+##  9  1975     9 WV           48.3   24.5 1975-09-01         119.      104.
+## 10  1975    10 WV           48.6   24.6 1975-10-01         120.      105.
+## # ... with 567 more rows</code></pre>
+</div>
+</div>
+<div id="mortgage-rates" class="section level1">
+<h1>Mortgage rates</h1>
+<p>For purposes here I’m only looking at, for the most part, the 30 year fixed rate because, well time and space are limited.</p>
+<div id="time-series-of-mortgage-rates" class="section level2">
+<h2>Time series of mortgage rates</h2>
+<p>Here we look at 30 and 15 year fixed mortgage rates, with recession dates overlaid for reference.</p>
+<pre class="r"><code>mortgage_rates %&gt;% 
+  ggplot() +
+  geom_line(aes(date, fixed_rate_30_yr), color = &quot;red&quot;) +
+  geom_line(aes(date, fixed_rate_15_yr), color = &quot;blue&quot;) +
+  geom_line(aes(date, adjustable_rate_5_1_hybrid), color = &quot;green&quot;) +
+  geom_rect(aes(xmin = from, xmax = to, ymin = -Inf, ymax = Inf), 
+            alpha = 0.25, fill = &quot;black&quot;, data = recession_dates) +
+  xlim(as.Date(&quot;1975-01-01&quot;), NA)</code></pre>
+<pre><code>## Warning: Removed 196 rows containing missing values (geom_path).</code></pre>
+<pre><code>## Warning: Removed 1065 rows containing missing values (geom_path).</code></pre>
+<pre><code>## Warning: Removed 1762 rows containing missing values (geom_path).</code></pre>
+<pre><code>## Warning: Removed 9 rows containing missing values (geom_rect).</code></pre>
+<p><img src="/post/2019-02-10-housing-prices-and-mortgage-rates_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+</div>
+<div id="relationship-between-housing-growth-and-mortgage-rates" class="section level2">
+<h2>Relationship between housing growth and mortgage rates</h2>
+<p>Here we do cross-correlation of US average HPI and fixed rate 30 year mortgage rates. We use tidy data munging, but then let the base R <code>ccf</code> function do the hard work. Because the mortgage rate is sparse, we use the <code>na.locf</code> function to fill in values from the last non-missing observation.</p>
+<pre class="r"><code>state_hpi %&gt;% 
+  left_join(mortgage_rates %&gt;% select(date, fixed_rate_30_yr), by = &quot;date&quot;) %&gt;% 
+  na.locf() -&gt;
+  hpi_and_mort
+
+hpi_and_mort %&gt;% 
+  filter(state == &quot;AK&quot;) %&gt;% # using average, which is same for all states, so arbitrary
+  select(date, us_avg, fixed_rate_30_yr)  -&gt;
+  us_hpi_mort
+
+with(us_hpi_mort, ccf(us_avg, fixed_rate_30_yr, main = &quot;CCF of US avg HPI and 30 year fixed rates&quot;))</code></pre>
+<p><img src="/post/2019-02-10-housing-prices-and-mortgage-rates_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+<p>The fact the cross-correlation function is so large in magnitude shows the persistence of relationships over a few years, showing that this information can be exploited perhaps in some prediction of housing or interest rates.</p>
+</div>
+<div id="partial-autocorrelation-of-fixed-30-year-rates" class="section level2">
+<h2>Partial Autocorrelation of fixed 30 year rates</h2>
+<p>Here we start to get into modeling of time series. Because the CCF above suggested a long-range dependence, I decided to check if there is some partial autocorrelation. Autocorrelation is just the correlation of the value at time <span class="math inline">\(T\)</span> and <span class="math inline">\(T - t\)</span>. Partial autocorrelation removes the correlation of the value at <span class="math inline">\(T\)</span> and <span class="math inline">\(T - s\)</span> from the correlation of the values at <span class="math inline">\(T\)</span> and <span class="math inline">\(T - t\)</span>, where <span class="math inline">\(s \le t\)</span>. Basically, we are trying to remove any confounding effect of intervening time periods. Here is the result, with the base R <code>pacf</code> doing the heavy lifting:</p>
+<pre class="r"><code>with(us_hpi_mort, pacf(fixed_rate_30_yr, main = &quot;ACF of 30 year fixed rates&quot;))</code></pre>
+<p><img src="/post/2019-02-10-housing-prices-and-mortgage-rates_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+<p>This is not too surprising, because in most cases the interest rate is exactly the same as the predecessor because of the filling in of missing data. We test if the time series is stationary using the augmented Dickey-Fuller test from the <code>tseries</code> package.</p>
+<pre class="r"><code>with(us_hpi_mort, adf.test(fixed_rate_30_yr))</code></pre>
+<pre><code>## 
+##  Augmented Dickey-Fuller Test
+## 
+## data:  fixed_rate_30_yr
+## Dickey-Fuller = -2.8577, Lag order = 8, p-value = 0.2153
+## alternative hypothesis: stationary</code></pre>
+<p>The series is not stationary, meaning the relationship between interest rates at some lag in time changes over time. Let’s go to work, using the <code>auto.arima</code> function from the excellent <code>forecast</code> package. An advantage of using this particular function is that the folks at <a href="https://www.business-science.io/">Business Science</a> have created the <code>tk_ts</code>, <code>timetk</code>, and <code>sweep</code> packages to make this function work in a tidy way. But first:</p>
+<pre class="r"><code>fix30 &lt;- auto.arima(us_hpi_mort$fixed_rate_30_yr)
+summary(fix30)</code></pre>
+<pre><code>## Series: us_hpi_mort$fixed_rate_30_yr 
+## ARIMA(0,1,0) 
+## 
+## sigma^2 estimated as 0.08941:  log likelihood=-109.85
+## AIC=221.7   AICc=221.71   BIC=225.95
+## 
+## Training set error measures:
+##                        ME      RMSE        MAE        MPE      MAPE
+## Training set -0.007790596 0.2987219 0.07540171 -0.1748321 0.9617707
+##                   MASE        ACF1
+## Training set 0.9983033 0.002579079</code></pre>
+<p>So we have to use an ARIMA(0,1,0) model, which is probably the simplest non-stationary model. The “untidy” way of showing the forecast is simple enough:</p>
+<pre class="r"><code>plot(forecast(fix30, h=12))</code></pre>
+<p><img src="/post/2019-02-10-housing-prices-and-mortgage-rates_files/figure-html/unnamed-chunk-11-1.png" width="672" /></p>
+</div>
+<div id="forecasts-the-tidy-way" class="section level2">
+<h2>Forecasts the tidy way</h2>
+<p>Here are forecasts for mortgage rates and housing growth, using the <code>auto.arima</code> function from the forecast package. I admit to ripping a little bit of this code from David Robinson’s dairy presentation.</p>
+<pre class="r"><code>us_hpi_mort %&gt;% 
+  gather(indicator, value, -date) %&gt;% 
+  nest(-indicator) %&gt;% 
+  mutate(ts = map(data, tk_ts, start = 1975.666666666, frequency = 12, deltat = 1/12))  %&gt;% 
+  mutate(model = map(ts, auto.arima),
+         forecast = map(model, forecast, h=60)) %&gt;% 
+  unnest(map(forecast, sw_sweep)) -&gt;
+  forecast_df</code></pre>
+<pre><code>## Warning in tk_xts_.data.frame(ret, select = select, silent = silent): Non-
+## numeric columns being dropped: date
+
+## Warning in tk_xts_.data.frame(ret, select = select, silent = silent): Non-
+## numeric columns being dropped: date</code></pre>
+<pre><code>## Warning in bind_rows_(x, .id): Vectorizing &#39;yearmon&#39; elements may not
+## preserve their attributes
+
+## Warning in bind_rows_(x, .id): Vectorizing &#39;yearmon&#39; elements may not
+## preserve their attributes</code></pre>
+<pre class="r"><code>forecast_df %&gt;% 
+  ggplot(aes(index, value)) +
+  geom_line(aes(color = key)) +
+  geom_ribbon(aes(ymin = lo.80, ymax = hi.80), alpha = 0.25) +
+  geom_ribbon(aes(ymin = lo.95, ymax = hi.95), alpha = 0.5) +
+  facet_wrap( ~ indicator, scales = &quot;free_y&quot;) +
+  expand_limits(y = 0) +
+  scale_color_discrete(guide = &quot;none&quot;) +
+  xlab(&quot;Year&quot;)</code></pre>
+<p><img src="/post/2019-02-10-housing-prices-and-mortgage-rates_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
+<p>The predictions give a wide range for interest rates (starting to include 0), but are rather flat. Housing is projected to continue growing, though could stall out.</p>
+<p>A word about this graph. In this particular case, I probably should have produced them separately, without the faceting. These things are on different scales, and the y-axis means different things in both cases. Just think about how you would re-label the axes.</p>
+<p>If I were not doing a blog post but rather trying to explore this for professional purposes, I’d dig into this a bit more, perhaps by pulling related data from <a href="https://fred.stlouisfed.org/">FRED</a>. The cross-correlation function shown above does suggest that one might be used to predict the other, so if there were some more sophisticated way of predicting mortgage rates, for instance (perhaps by using sentiment analysis on Fed statements, for instance), you can use that to predict housing price growth.</p>
+</div>
+<div id="relationship-between-housing-growth-and-mortgage-revisited" class="section level2">
+<h2>Relationship between housing growth and mortgage, revisited</h2>
+<p>Here, rather than looking over time, we visualization the US avg HPI and mortgage rates on a scatterplot:</p>
+<pre class="r"><code>us_hpi_mort %&gt;% 
+  ggplot(aes(fixed_rate_30_yr, us_avg)) +
+  geom_point() +
+  geom_smooth(method = &quot;lm&quot;, se = FALSE)</code></pre>
+<p><img src="/post/2019-02-10-housing-prices-and-mortgage-rates_files/figure-html/unnamed-chunk-13-1.png" width="672" /></p>
+<p>Those fixed 30 year rates to the right of the plot are going to prove troublesome. These are the extremely high rates from the 80s.</p>
+<p>Now we do a regression of US avg HPI on mortgage rates:</p>
+<pre class="r"><code>hpi_mort_lm &lt;- lm(us_avg ~ lag(fixed_rate_30_yr), data = us_hpi_mort)
+summary(hpi_mort_lm)</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = us_avg ~ lag(fixed_rate_30_yr), data = us_hpi_mort)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -60.511 -14.953  -0.281  15.064  53.741 
+## 
+## Coefficients:
+##                       Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)           190.5045     3.2441   58.72   &lt;2e-16 ***
+## lag(fixed_rate_30_yr) -11.8700     0.3731  -31.82   &lt;2e-16 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 26.58 on 517 degrees of freedom
+##   (1 observation deleted due to missingness)
+## Multiple R-squared:  0.662,  Adjusted R-squared:  0.6613 
+## F-statistic:  1012 on 1 and 517 DF,  p-value: &lt; 2.2e-16</code></pre>
+<p>I’m worried here that the hi-leverage points from the 1980s mortgage rates are throwing things off. I’ll try a robust linear model (p. 100 from Faraway).</p>
+<pre class="r"><code>library(MASS)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;MASS&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:dplyr&#39;:
+## 
+##     select</code></pre>
+<pre class="r"><code>hpi_mort_rlm &lt;- rlm(us_avg ~ fixed_rate_30_yr, data = us_hpi_mort)
+summary(hpi_mort_rlm)</code></pre>
+<pre><code>## 
+## Call: rlm(formula = us_avg ~ fixed_rate_30_yr, data = us_hpi_mort)
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -60.7262 -15.2312  -0.2793  14.7623  57.2668 
+## 
+## Coefficients:
+##                  Value    Std. Error t value 
+## (Intercept)      188.3950   3.2546    57.8866
+## fixed_rate_30_yr -11.6205   0.3745   -31.0283
+## 
+## Residual standard error: 22.24 on 518 degrees of freedom</code></pre>
+<p>I’m still not too happy with this. The hi-leverage points from the 80s seem to really be screwing things up, and the robust method in <code>rlm</code> works with heavy-tailed residual distributions. There clearly is some relationship, but I think there are a couple of things obscuring the situation:</p>
+<ul>
+<li>The hi-leverage points</li>
+<li>The overall growth of the economy</li>
+</ul>
+<p>Because <code>MASS</code> interferes with <code>dplyr</code> and I don’t need it any more, I remove it (and get <code>select</code> back).</p>
+<pre class="r"><code>detach(&quot;package:MASS&quot;)</code></pre>
+</div>
+<div id="the-effect-of-recessions" class="section level2">
+<h2>The effect of recessions</h2>
+<p>Here I want to determine whether a particular time point is during a recession. Then I will add that to the visualization above. We do this by using a crossing and then filtering on whether a date is between <code>from</code> and <code>to</code>:</p>
+<pre class="r"><code>recession_dates %&gt;% 
+  select(from, to) %&gt;% 
+  mutate(is_recession = TRUE) -&gt;
+  recession_join
+
+us_hpi_mort %&gt;% 
+  crossing(recession_join) %&gt;% 
+  filter(date &gt;= from &amp; date &lt;= to) -&gt;
+  us_hpi_rec
+
+us_hpi_mort %&gt;% 
+  left_join(us_hpi_rec %&gt;% select(date, is_recession)) %&gt;% 
+  mutate(is_recession = if_else(is.na(is_recession), FALSE, is_recession)) -&gt;
+  us_hpi_mort_rec</code></pre>
+<pre><code>## Joining, by = &quot;date&quot;</code></pre>
+<p>Now that we’ve determined whether we’re in a recession, we can show the relationship again, with color-coding:</p>
+<pre class="r"><code>us_hpi_mort_rec %&gt;% 
+  ggplot(aes(fixed_rate_30_yr, us_avg)) +
+  geom_point(aes(color = is_recession)) +
+  geom_smooth(method = &quot;lm&quot;, se = FALSE)</code></pre>
+<p><img src="/post/2019-02-10-housing-prices-and-mortgage-rates_files/figure-html/unnamed-chunk-18-1.png" width="672" /></p>
+<p>There doesn’t look to be a lot there, but then again we haven’t spent a lot of time in recession. Let’s look at two separate lines now. This time I added the <code>color = is_recession</code> to the original <code>ggplot</code> call so that both <code>geom_point</code> and <code>geom_smooth</code> will interit this mapping.</p>
+<pre class="r"><code>us_hpi_mort_rec %&gt;% 
+  ggplot(aes(fixed_rate_30_yr, us_avg, group = is_recession, color = is_recession)) +
+  geom_point() +
+  geom_smooth(method = &quot;lm&quot;, se = FALSE)</code></pre>
+<p><img src="/post/2019-02-10-housing-prices-and-mortgage-rates_files/figure-html/unnamed-chunk-19-1.png" width="672" /></p>
+<p>There’s a small hint on a change in relationship between housing growth in the US and mortgage rates in recessions.</p>
+</div>
+</div>
+<div id="by-state-relationships" class="section level1">
+<h1>By state relationships</h1>
+<p>The true power here is to recreate the above analysis by state all at once. I’m only going to use four states: DC, HI, SC, and CA. Three are interesting, and one is perhaps more interesting to me than others.</p>
+<p>We basically replicate the above steps, but use <code>map</code> extensively. We can also re-use <code>recession_join</code> above to determine whether a US recession is going on. What might be more interesting is to get by-state recession data, but that’s not what we have here. Because I’m looking at two variables, and I’m crossing a large dataset with another one, I cut down on memory usage a bit by selecting a small number of variables. I can also just use the original price index here; it will not affect the analysis.</p>
+<pre class="r"><code>my_states &lt;- c(&quot;DC&quot;, &quot;HI&quot;, &quot;SC&quot;, &quot;CA&quot;)
+
+hpi_and_mort %&gt;% 
+  select(date, state, price_index, fixed_rate_30_yr) %&gt;% 
+  filter(state %in% my_states) -&gt; 
+  hpi_and_mort_2
+
+hpi_and_mort_2 %&gt;% 
+  crossing(recession_join) %&gt;% 
+  filter(date &gt;= from &amp; date &lt;= to) -&gt;
+  us_hpi_rec
+
+hpi_and_mort_2 %&gt;% 
+  left_join(us_hpi_rec %&gt;% select(date, is_recession), by = &quot;date&quot;) %&gt;% 
+  mutate(is_recession = if_else(is.na(is_recession), FALSE, is_recession)) -&gt;
+  hpi_mort_rec</code></pre>
+<p>Now we can do the same as above, but add a <code>facet_wrap</code> to look at individual states.</p>
+<pre class="r"><code>hpi_mort_rec %&gt;% 
+  ggplot(aes(fixed_rate_30_yr, price_index)) +
+  geom_point(aes(color = is_recession)) +
+  geom_smooth(method = &quot;lm&quot;, se = FALSE) +
+  facet_wrap( ~ state)</code></pre>
+<p><img src="/post/2019-02-10-housing-prices-and-mortgage-rates_files/figure-html/unnamed-chunk-21-1.png" width="672" /></p>
+<p>You can see the relationship between housing and mortgage rates (30 year fixed) differ by state. Perhaps those states with high housing price growth to begin with are more sensitive to interest rates, and this makes sense.</p>
+<p>Finally, lets see the change in relationship during recessions:</p>
+<pre class="r"><code>hpi_mort_rec %&gt;% 
+  ggplot(aes(fixed_rate_30_yr, price_index, group = is_recession, color = is_recession)) +
+  geom_point() +
+  geom_smooth(method = &quot;lm&quot;, se = FALSE) +
+  facet_wrap( ~ state)</code></pre>
+<p><img src="/post/2019-02-10-housing-prices-and-mortgage-rates_files/figure-html/unnamed-chunk-22-1.png" width="672" /></p>
+<p>Again, it looks like places with higher growth are more sensitive to recessions. It’s a hypothesis worth exploring.</p>
+<p>Well, that’s a wrap for this week, although now that I’m getting more interested in economic data I’ll probably look at this some more.</p>
+</div>

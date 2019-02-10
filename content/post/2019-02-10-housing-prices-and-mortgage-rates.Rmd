@@ -11,8 +11,9 @@ tags:
 
 # Purpose
 
-This Tidy Tuesday looks at housing prices.
-https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-02-05
+This Tidy Tuesday looks at housing prices and mortgage rates. It also considers recessions. I show one way of merging all this data below. 
+
+The R4DS post for the challenge can be found [here](https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-02-05).
 
 
 

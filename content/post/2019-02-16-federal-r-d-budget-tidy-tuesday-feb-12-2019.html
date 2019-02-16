@@ -1,0 +1,184 @@
+---
+title: Federal R&D Budget (Tidy Tuesday Feb 12, 2019)
+author: John
+date: '2019-02-16'
+slug: federal-r-d-budget-tidy-tuesday-feb-12-2019
+categories:
+  - General
+tags:
+  - tidy tuesday
+---
+
+
+
+<div id="purpose" class="section level1">
+<h1>Purpose</h1>
+<p>The purpose of this is to analyze federal budget data for Tidy Tuesday February 12, 2019. The webpage for the challenge is at the <a href="https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-02-12">R2DS website</a>. The original data source is the <a href="https://www.aaas.org/programs/r-d-budget-and-policy/historical-trends-federal-rd">AAAS</a>.</p>
+</div>
+<div id="setup" class="section level1">
+<h1>Setup</h1>
+</div>
+<div id="get-data" class="section level1">
+<h1>Get data</h1>
+<p>From the website, the code to get the data is as follows:</p>
+<pre class="r"><code>fed_rd &lt;- readr::read_csv(&quot;https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-02-12/fed_r_d_spending.csv&quot;)</code></pre>
+<pre><code>## Parsed with column specification:
+## cols(
+##   department = col_character(),
+##   year = col_double(),
+##   rd_budget = col_double(),
+##   total_outlays = col_double(),
+##   discretionary_outlays = col_double(),
+##   gdp = col_double()
+## )</code></pre>
+<pre class="r"><code># energy_spend &lt;- readr::read_csv(&quot;https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-02-12/energy_spending.csv&quot;)
+# climate_spend &lt;- readr::read_csv(&quot;https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-02-12/climate_spending.csv&quot;, col_types = &quot;ccd&quot;)</code></pre>
+<p>There is an issue with the climate spend data, so I downloaded the Excel file from the source site and reimported. I had to rework the cleaning code a bit, mostly to deal with some unfortunate renaming issue in tibble’s name repair mechanism (the variable name for the agency gets renamed to <code>..1</code>, which confounds the NSE mechanisms of <code>rename</code> and other <code>dplyr</code> functions). Basically, I fell back to base R’s name repair and modified the cleaning code slightly to compensate. However, I don’t use the energy and climate dataset below, so I comment those out for now.</p>
+<p>One thing that will be interesting: adding in the party of the President. Though Nixon/Ford started in 1969, I’ll just start from 1976, when the data begin. This will help with the graphs.</p>
+<pre class="r"><code>party &lt;- tribble(
+  ~party,       ~from,  ~to,
+  &quot;Republican&quot;, 1976,   1977,
+  &quot;Democrat&quot;,   1977,   1981,
+  &quot;Republican&quot;, 1981,   1993,
+  &quot;Democrat&quot;,   1993,   2001,
+  &quot;Republican&quot;, 2001,   2009,
+  &quot;Democrat&quot;,   2009,   2017,
+  &quot;Republican&quot;, 2017,   2019
+)</code></pre>
+<p>Let’s add this to the <code>fed_rd</code> dataset.</p>
+<pre class="r"><code>fed_rd %&gt;% 
+  crossing(party) %&gt;% 
+  filter(year &gt;= from &amp; year &lt; to) %&gt;% 
+  select(-from, -to) -&gt;
+  fed_rd</code></pre>
+</div>
+<div id="exploration" class="section level1">
+<h1>Exploration</h1>
+<div id="federal-rd" class="section level2">
+<h2>Federal R&amp;D</h2>
+<p>The first dataset shows Federal R&amp;D, and looks as follows:</p>
+<pre class="r"><code>head(fed_rd)</code></pre>
+<pre><code>## # A tibble: 6 x 7
+##   department  year  rd_budget total_outlays discretionary_ou~     gdp party
+##   &lt;chr&gt;      &lt;dbl&gt;      &lt;dbl&gt;         &lt;dbl&gt;             &lt;dbl&gt;   &lt;dbl&gt; &lt;chr&gt;
+## 1 DOD         1976    3.57e10  371800000000      175600000000 1.79e12 Repu~
+## 2 NASA        1976    1.25e10  371800000000      175600000000 1.79e12 Repu~
+## 3 DOE         1976    1.09e10  371800000000      175600000000 1.79e12 Repu~
+## 4 HHS         1976    9.23e 9  371800000000      175600000000 1.79e12 Repu~
+## 5 NIH         1976    8.02e 9  371800000000      175600000000 1.79e12 Repu~
+## 6 NSF         1976    2.37e 9  371800000000      175600000000 1.79e12 Repu~</code></pre>
+<p>This already suggests a visualization, so let’s try one. The default y-axis label is in dollars, so I use the <code>scales::dollar_format</code> function to scale it to billions of dollars, and adjust the label accordingly.</p>
+<pre class="r"><code>ggplot(fed_rd, aes(year, rd_budget, group = department, color = department)) +
+  geom_line() +
+  geom_rect(aes(xmin = from, xmax = to, ymin = -Inf, ymax = Inf, fill = party), 
+            inherit.aes = FALSE, data = party, alpha = 0.2) +
+  xlab(&quot;Year&quot;) +
+  ylab(&quot;Federal R&amp;D Budget (billions)&quot;) +
+  scale_color_viridis_d() +
+  scale_fill_brewer() +
+  scale_y_continuous(labels = scales::dollar_format(scale = 1e-9))</code></pre>
+<p><img src="/post/2019-02-16-federal-r-d-budget-tidy-tuesday-feb-12-2019_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
+<p>It would be interesting to get these budgets as a percentage of discretionary or total outlays. We’ll start with discretionary. I use the <code>scales::percent_format</code> to label the y-xaxis. The automatic guess from <code>scales::percent</code> gives one decimal place, which I thought was silly for this graph, so I put in the extra effort to cut it out.</p>
+<pre class="r"><code>fed_rd %&gt;% 
+  mutate(rd_perc_disc = rd_budget / discretionary_outlays) %&gt;% 
+  ggplot(aes(year, rd_perc_disc, group = department, color = department)) +
+  geom_line() +
+  geom_rect(aes(xmin = from, xmax = to, ymin = -Inf, ymax = Inf, fill = party), 
+            inherit.aes = FALSE, data = party, alpha = 0.2) +
+  xlab(&quot;Year&quot;) +
+  ylab(&quot;Federal R&amp;D proportion of discretionary spending&quot;) +
+  scale_colour_viridis_d() +
+  scale_fill_brewer() +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1))</code></pre>
+<p><img src="/post/2019-02-16-federal-r-d-budget-tidy-tuesday-feb-12-2019_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+<p>The same for percentage of total, leaving the extra decimal place in this time because it is informative:</p>
+<pre class="r"><code>fed_rd %&gt;% 
+  mutate(rd_perc_tot = rd_budget / total_outlays) %&gt;% 
+  ggplot(aes(year, rd_perc_tot, group = department, color = department)) +
+  geom_line() +
+  geom_rect(aes(xmin = from, xmax = to, ymin = -Inf, ymax = Inf, fill = party), 
+            inherit.aes = FALSE, data = party, alpha = 0.2) +
+  xlab(&quot;Year&quot;) +
+  ylab(&quot;Federal R&amp;D proportion of total spending&quot;) +
+  scale_colour_viridis_d() +
+  scale_fill_brewer() +
+  scale_y_continuous(labels = scales::percent) </code></pre>
+<p><img src="/post/2019-02-16-federal-r-d-budget-tidy-tuesday-feb-12-2019_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+<p>Ok, so this brief exploration showed that defense spending has dominated other spending, at least as a portion of the federal budget. One thing I did check on at the AAAS site is that this spending is adjusted for inflation. (Probably should have checked that before embarking on this!)</p>
+<p>I think it is worth trying to remake the above graph but switching the legend order based on the average spending over time. Here we go:</p>
+<pre class="r"><code>fed_rd %&gt;% 
+  mutate(rd_perc_tot = rd_budget / total_outlays,
+         department = fct_reorder(department, rd_perc_tot, .fun = mean)) %&gt;% 
+  ggplot(aes(year, rd_perc_tot, group = department, color = department)) +
+  geom_line() +
+  geom_rect(aes(xmin = from, xmax = to, ymin = -Inf, ymax = Inf, fill = party), 
+            inherit.aes = FALSE, data = party, alpha = 0.2) +
+  xlab(&quot;Year&quot;) +
+  ylab(&quot;Federal R&amp;D proportion of total spending&quot;) +
+  scale_colour_viridis_d(option = &quot;B&quot;, direction = -1) +
+  scale_fill_brewer() +
+  scale_y_continuous(labels = scales::percent) </code></pre>
+<p><img src="/post/2019-02-16-federal-r-d-budget-tidy-tuesday-feb-12-2019_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+<p>I think this graph is more informative than the above graph ordered alphabetically by department. I also switched up the color scheme a bit. To me this subtle change made the graph far more informative, with the color legend giving the order of the priority (more or less) of R&amp;D vs the discretionary spending from least to most. This simple change using the <code>fct_reorder</code> function from the <code>forcats</code> package (loaded as part of <code>tidyverse</code>) is very powerful. (I could have also done this in the <code>ggplot</code> aesthetic.)</p>
+<p>One more quick addition to see if it adds anything:</p>
+<pre class="r"><code>fed_rd %&gt;% 
+  mutate(rd_perc_tot = rd_budget / total_outlays,
+         department = fct_reorder(department, rd_perc_tot, .fun = mean)) %&gt;% 
+  ggplot(aes(year, rd_perc_tot, group = department, color = department)) +
+  geom_line() +
+  geom_rect(aes(xmin = from, xmax = to, ymin = -Inf, ymax = Inf, fill = party), 
+            inherit.aes = FALSE, data = party, alpha = 0.2) +
+  geom_smooth(method = &quot;lm&quot;, se = FALSE, size = 0.5, linetype = &quot;dotted&quot;) +
+  xlab(&quot;Year&quot;) +
+  ylab(&quot;Federal R&amp;D proportion of total spending&quot;) +
+  scale_colour_viridis_d(option = &quot;B&quot;, direction = -1) +
+  scale_fill_brewer() +
+  scale_y_continuous(labels = scales::percent) </code></pre>
+<p><img src="/post/2019-02-16-federal-r-d-budget-tidy-tuesday-feb-12-2019_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+<p>The fitted lines give a little more information that may help group the R&amp;D budgets even further. We have DOD, in a class by itself (obvious from the raw line plot), HHS and NIH that have a slight trend down over time, DOE and NASA that started higher but have a stronger trend down, then everything else that started low relative to everything else and as a result remain relatively flat. One final picture, putting the y-axis on log scale:</p>
+<pre class="r"><code>fed_rd %&gt;% 
+  mutate(rd_perc_tot = rd_budget / total_outlays,
+         department = fct_reorder(department, rd_perc_tot, .fun = mean)) %&gt;% 
+  ggplot(aes(year, rd_perc_tot, group = department, color = department)) +
+  geom_line() +
+  geom_rect(aes(xmin = from, xmax = to, ymin = 0.0001, ymax = Inf, fill = party), 
+            inherit.aes = FALSE, data = party, alpha = 0.2) +
+  geom_smooth(method = &quot;lm&quot;, se = FALSE, size = 0.5, linetype = &quot;dotted&quot;) +
+  xlab(&quot;Year&quot;) +
+  ylab(&quot;Federal R&amp;D proportion of total spending&quot;) +
+  scale_colour_viridis_d(option = &quot;B&quot;, direction = -1) +
+  scale_fill_brewer() +
+  scale_y_log10(labels = scales::percent) </code></pre>
+<pre><code>## Warning: Transformation introduced infinite values in continuous y-axis
+
+## Warning: Transformation introduced infinite values in continuous y-axis</code></pre>
+<pre><code>## Warning: Removed 26 rows containing non-finite values (stat_smooth).</code></pre>
+<p><img src="/post/2019-02-16-federal-r-d-budget-tidy-tuesday-feb-12-2019_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
+<p>This graph was produced by switching <code>scale_y_log10</code> in for <code>scale_y_continuous</code>. You get a whole bunch of junk complaining about how you can’t take the log of a negative values (from <code>geom_smooth</code>, because the linear trend extends below 0), and <code>geom_rect</code> if you keep the <code>ymin = -Inf</code>. I went ahead and changed <code>ymin = 0.01</code> so we could keep the party shading. The main effect of the log scale was to explore the trends of the “everything else” in the above graphs. What was a relatively flat trend still is, but it is shown that everything in R&amp;D is trending down relative to discretionary spending.</p>
+<p>These three graphs all give an interesting picture. Under Republican presidents in general, defense R&amp;D spending has increased, sometimes drastically so, for a few years and started to fall. But as a general trend, defense spending as a percentage of discretionary and total spending has declined since the 1970s, where we were still in the heat of the Cold War. (It’s important to remember we’re talking about R&amp;D spending.)</p>
+</div>
+</div>
+<div id="just-for-kicks" class="section level1">
+<h1>Just for kicks</h1>
+<p>Ow, my eyes!</p>
+<pre class="r"><code>library(gganimate)
+fed_rd %&gt;% 
+  mutate(rd_perc_tot = rd_budget / total_outlays,
+         department = fct_reorder(department, rd_perc_tot, .fun = mean)) %&gt;% 
+  ggplot(aes(x = &quot;&quot;, rd_perc_tot, fill = department)) +
+  geom_bar(width = 1, stat = &quot;identity&quot;) +
+  coord_polar(&quot;y&quot;) +
+  scale_fill_viridis_d(option = &quot;B&quot;) +
+  ggtitle(&quot;Federal R&amp;D proportion of total spending&quot;) +
+  scale_y_continuous(labels = scales::percent) +
+  theme_void() +
+  transition_time(year) +
+  ease_aes(&quot;linear&quot;)</code></pre>
+<p><img src="/post/2019-02-16-federal-r-d-budget-tidy-tuesday-feb-12-2019_files/figure-html/unnamed-chunk-11-1.gif" /><!-- --></p>
+<p>I think I just invented the incredible shrinking pie chart.</p>
+</div>
+<div id="discussion" class="section level1">
+<h1>Discussion</h1>
+<p>Honestly, this blog post went in a slightly different direction than I thought. The main takeaway from above is that subtle changes to the coloring, ordering, and scaling of a graph can reveal different insights in the data. I don’t think any one of the above is particularly better than any other, just different.</p>
+<p>There are a lot of different directions this can go. I thought about using <code>gganimate</code> with pie charts just to hurt some eyes. If you were a goverment contractor, you might be interested in forecasts, and it would be easy to apply the techniques from the previous blog posts to do that. I didn’t even touch the climate dataset.</p>
+</div>

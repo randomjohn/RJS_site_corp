@@ -1,0 +1,161 @@
+---
+title: Number of PhDs (Tidy Tuesday, February 19, 2019)
+author: John
+date: '2019-02-20'
+slug: number-of-phds-tidy-tuesday-february-19-2019
+categories:
+  - General
+tags:
+  - tidy tuesday
+---
+
+# Purpose
+
+This week's Tidy Tuesday is regarding the number of PhDs awarded in each field by year. This information is provided by the National Science Foundation, and can be found in cleaned form at the [Tidy Tuesday website](https://github.com/rfordatascience/tidytuesday/tree/master/data/2019/2019-02-19). In honor of Carson Sievert's RStudio webinar on `plotly.js`, I decided to make all of the plots with the `plotly` package, adding some basic interactivity. Go ahead, hover over the graphs. I originally used just `ggplot2`, and the transition to `plotly` graphs was easy. There are a few caveats (legend position, for example), but all in all the code is not a lot different, and I think the interactivity is great.
+
+# Setup
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(plotly)
+```
+
+# Data
+
+The data consists of year, number of PhDs, and three nested levels of categorization.
+
+```{r}
+phd_field <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-02-19/phd_by_field.csv")
+```
+
+# Exploration
+
+I noticed upon viewing that there are some NAs:
+
+```{r}
+phd_field %>% 
+  count(is.na(n_phds))
+```
+
+So there are 278 NAs. In this particular case, because these are counts and because of the way they are cleaned (see the website above for more info), I think it is safe to assume that these NAs are actually 0. *I would not make this assumption for just any analysis!* It's pure logic here.
+
+```{r}
+phd_field %>% 
+  mutate(n_phds = if_else(is.na(n_phds), 0, n_phds, 0)) ->
+  phd_field
+```
+
+Ok, now that we've dealt with missing data, let's do a quick exploration of the different levels. First up is the "broad field" `broad_field`. 
+
+```{r}
+phd_field %>% 
+  mutate(broad_field = str_replace(broad_field, " and ", "/"),
+         broad_field = str_replace_all(broad_field, "sciences", "sci"),
+         broad_field = str_replace(broad_field, "Mathematics", "Math")) %>% 
+  group_by(broad_field, year) %>% 
+  summarize(n_phds = sum(n_phds)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = year, y = n_phds, 
+             fill = fct_reorder(broad_field, n_phds, .fun = median))) + 
+  geom_area(stat = "identity") +
+  xlab("Year") + ylab("Number of PhDs awarded") + labs(fill = "") +
+  scale_x_continuous(breaks = seq(min(phd_field$year), max(phd_field$year), by = 2)) +
+  scale_fill_viridis_d() +
+  theme_minimal() ->
+  p
+
+ggplotly(p)
+```
+
+With this ordering of broad field by median count, we see a couple of things right away. Life sciences is the most awarded field over time, followed by psychology/social sciences and then humanities. PhDs seem to be trending up a little bit over time (with the exception of the period following the Great Recession) and perhaps stabilizing now. Most PhDs seem to be in STEM fields. Education PhDs decreased after the Great Recession but stabilized. All others seem stable or have grown somewhat.
+
+I originally had the above chart as a stacked bar chart, but I think in this case the area chart shows the trends a bit better.
+
+# Some more detail
+
+Here's a breakdown of the mathematics and computer science field:
+
+```{r}
+phd_field %>% 
+  filter(broad_field == "Mathematics and computer sciences") %>% 
+  mutate(major_field = str_replace(major_field, "sciences", "sci"),
+         major_field = str_replace(major_field, ",? and ", "/"),
+         major_field = fct_reorder(major_field, n_phds, .fun = median)) %>% 
+  group_by(major_field, year) %>% 
+  summarize(n_phds = sum(n_phds)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = year, y = n_phds, 
+             fill = major_field)) + 
+  geom_area(stat = "identity") +
+  xlab("Year") + ylab("Number of PhDs awarded") + labs(fill = "") +
+  scale_x_continuous(breaks = seq(min(phd_field$year), max(phd_field$year), by = 2)) +
+  scale_fill_viridis_d() +
+  theme_minimal() -> p
+
+ggplotly(p)
+```
+
+Pretty much the same trends we've noticed with the broad field above.
+
+Here's the breakdown for life sciences:
+
+```{r}
+phd_field %>% 
+  filter(broad_field == "Life sciences") %>% 
+  mutate(major_field = str_replace_all(major_field, " sciences", ""),
+         major_field = str_replace(major_field, "sciences", "sci"),
+         major_field = str_replace(major_field, ",? and ", "/"),
+         major_field = fct_reorder(major_field, n_phds, .fun = median)) %>% 
+  group_by(major_field, year) %>% 
+  summarize(n_phds = sum(n_phds)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = year, y = n_phds, 
+             fill = major_field)) + 
+  geom_area(stat = "identity") +
+  xlab("Year") + ylab("Number of PhDs awarded") + labs(fill = "") +
+  scale_x_continuous(breaks = seq(min(phd_field$year), max(phd_field$year), by = 2)) +
+  scale_fill_viridis_d() +
+  theme_minimal()  ->
+  p
+
+ggplotly(p)
+```
+
+Something is definitely strange with the geosciences label in the dataset. And also strange with this grouping. I guess they didn't want too many broad fields, but physics and astronomy aren't really "life sciences" (although there is a cool astrobiology field). I guess you can get into grey areas with others. But that's not why we're here. It looks like there's a small downtrend in biological and biomedical sciences PhDs since 2016 that's driving a slight downtrend in the whole broad field. But I would not be surprised if this were just noise, and that the uptrend will continue over time. There's a lot of demand for this field.
+
+# Even more detail
+
+We can look at the mathematics and computer science in even more detail.
+
+```{r}
+phd_field %>% 
+  filter(broad_field == "Mathematics and computer sciences") %>% 
+  mutate(field = str_replace(field, " and ", "/"),
+         field = str_replace(field, ", other|, general", ""),
+         field = str_replace(field, "analysis", "anly"),
+         field = str_replace(field, "mathematics", "maths"),
+         field = str_replace(field, "sciences?", "sci"),
+         field = fct_reorder(field, n_phds, .fun = median)) %>% 
+  group_by(field, year) %>% 
+  summarize(n_phds = sum(n_phds)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = year, y = n_phds, 
+             fill = field)) + 
+  geom_area(stat = "identity") +
+  xlab("Year") + ylab("Number of PhDs awarded") + labs(fill = "") +
+  scale_x_continuous(breaks = seq(min(phd_field$year), max(phd_field$year), by = 2)) +
+  scale_fill_viridis_d() +
+  theme_minimal() -> p
+
+ggplotly(p)
+```
+
+You'll have to forgive my _ad hoc_ tuned abbreviations. Actually, that was the longest part of this post.
+
+I think it is interesting that computer science holds the bulk of PhDs, followed by fields of mathematics of generally increasing abstraction
+
+# Discussion
+
+This seemed like a very simple post, and honestly it was. I *could* have done a lot more. But really, I think that any sort of modeling as I did with dairy production or housing in the past is not warranted here. There's only a few years of data, and any sort of projections in this case might not make a lot of sense. At least the prediction error bands would be so large so as to preclude much meaningful utility. Besides, I would want to use other variables in such predictions, such as the undergraduate majors and current enrollment in major institutions to assist with those predictions. At most, I would add a trend line and make some hand-waving argument about what is going up or down, but I don't think that would have contributed more to the hand-waving I did in this post.
+
+There's also a lot of other discussion that could inform this analysis, such as the difference between the Statistics (maths) and Mathematics/statistics PhDs. I suspect that it's more of a form of emphasis. To me, the most important thing I did in this post was to use the `fct_reorder` function to order the fields from most awarded to least.
